@@ -57,8 +57,8 @@ class MainWindow(QMainWindow):
         folder_selection_group.setLayout(folder_form_layout)
 
         self.folder_selection_parameters = [
-            ("data_folder_path", "Data folder", os.path.join(Path.cwd(), 'Data')),
-            ("target_folder_path", "Target folder", os.path.join(Path.cwd(), 'DataOrganized'))
+            ("data_folder_path", "Data folder", os.path.join('E:', 'Treadmill - no stimulation')),
+            ("target_folder_path", "Target folder", os.path.join('E:', 'NewTreadmilTest'))
             ]
 
         # Instantiate the folder selection widgets
@@ -81,9 +81,9 @@ class MainWindow(QMainWindow):
         single_value_parameters : list[tuple[str, str, float]] = [ 
             ("csv_extension", "CSV extension", ".csv"),
             ("video_extension", "Video extension", ".mp4"),
-            ("side_folder_name", "Side folder name", "sideview"),
-            ("ventral_folder_name", "Ventral folder name", "ventralview"),
-            ("video_folder_name", "Video folder name", "video")
+            ("side_folder_name", "Side folder name", "side_view_analysis"),
+            ("ventral_folder_name", "Ventral folder name", "ventral_view_analysis"),
+            ("video_folder_name", "Video folder name", "Video")
         ]
 
         # Adds these parameters to the form layout
@@ -109,9 +109,9 @@ class MainWindow(QMainWindow):
         # TODO: pass these values as parameters instead of hardcoding
         # List of vector value parameters to ask the user (dictionnary key, display parameter name, parameter default value)
         vector_value_parameters = [
-            ("dataset_name_delimiters", "Dataset name delimiters", [("Start", "CnF_"), ("End", "_Corridor")]),
+            ("dataset_name_delimiters", "Dataset name delimiters", [("Start", "CnF_"), ("End", "_Test")]),
             ("mouse_name_delimiters", "Mouse name delimiters", [("Start", "ventral_"), ("End", "_CnF")]),
-            ("run_name_delimiters", "Run name delimiters", [("Start", "eft_"), ("End", "DLC")]),
+            ("run_name_delimiters", "Run name delimiters", [("Start", "Treadmill"), ("End", "DLC")]),
             ("batch_name_delimiters", "Batch name delimiters", [("Start", ''), ("End", '')])
         ]
 

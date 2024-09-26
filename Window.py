@@ -82,18 +82,18 @@ class MainWindow(QMainWindow):
         single_value_parameters : list[tuple[str, str, float]] = [ 
             ("csv_extension", "CSV extension", ".csv"),
             ("video_extension", "Video extension", ".mp4"),
-            ("side_folder_name", "Side folder name", "side_view_analysis"),
-            ("ventral_folder_name", "Ventral folder name", "ventral_view_analysis"),
-            ("video_folder_name", "Video folder name", "Video")
+            ("side_folder_name", "Side folder name (Name of the side view folder to create)", "side_view_analysis"),
+            ("ventral_folder_name", "Ventral folder name (Name of the ventral view folder to create)", "ventral_view_analysis"),
+            ("video_folder_name", "Video folder name (Name of the video folder to create)", "Video")
         ]
 
         # Adds these parameters to the form layout
         add_input_to_form_layout(parameters_form_layout, None, single_value_parameters, self.organize_file_parameters_dict)
 
         single_value_parameters : list[tuple[str, str, float]] = [
-            ("default_batch_name", "Default batch name", "Batch"),
-            ("side_keyword", "Side keyword", "sideview"),
-            ("ventral_keyword", "Ventral keyword", "ventralview")
+            ("default_batch_name", "Default batch name (Name of the batch folder to create in case no batch name is found from the data's file name)", "Batch"),
+            ("side_keyword", "Side keyword (keyword in the name of every side view file, allowing to distinguish them from other files)", "sideview"),
+            ("ventral_keyword", "Ventral keyword (keyword in the name of every ventral view file, allowing to distinguish them from other files)", "ventralview")
         ]
 
         # Adds these parameters to the form layout
@@ -111,10 +111,10 @@ class MainWindow(QMainWindow):
         # TODO: pass these values as parameters instead of hardcoding
         # List of vector value parameters to ask the user (dictionnary key, display parameter name, parameter default value)
         vector_value_parameters = [
-            ("dataset_name_delimiters", "Dataset name delimiters", [("Start", "CnF_"), ("End", "_Test")]),
-            ("mouse_name_delimiters", "Mouse name delimiters", [("Start", "ventral_"), ("End", "_CnF")]),
-            ("run_name_delimiters", "Run name delimiters", [("Start", "Treadmill"), ("End", "DLC")]),
-            ("batch_name_delimiters", "Batch name delimiters", [("Start", ''), ("End", '')])
+            ("dataset_name_delimiters", "Dataset name delimiters (The name of the dataset is between 'Start' and 'End' in the file name)", [("Start", "CnF_"), ("End", "_Test")]),
+            ("mouse_name_delimiters", "Mouse name delimiters (The name of the mouse is between 'Start' and 'End' in the file name)", [("Start", "ventral_"), ("End", "_CnF")]),
+            ("run_name_delimiters", "Run name delimiters (The name of the run is between 'Start' and 'End' in the file name)", [("Start", "Treadmill"), ("End", "DLC")]),
+            ("batch_name_delimiters", "Batch name delimiters (The name of the batch is between 'Start' and 'End' in the file name)", [("Start", ''), ("End", '')])
         ]
 
         # Adds these parameters to the form layout

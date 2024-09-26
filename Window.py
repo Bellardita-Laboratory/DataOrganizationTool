@@ -192,11 +192,9 @@ class MainWindow(QMainWindow):
         dictionary[filepath_dict_key] = file
 
     def _organize_btn_clicked(self):
-        print(self.file_organizer_parameters_dict)
-        print(self.organize_file_parameters_dict)
-
+        # Check if the batch delimiters are empty, if so set them to None
         batch_name_delimiters = self.file_organizer_parameters_dict["batch_name_delimiters"]
-        if batch_name_delimiters is None or batch_name_delimiters[0] == '' and batch_name_delimiters[1] == '':
+        if batch_name_delimiters is not None and batch_name_delimiters[0] == '' and batch_name_delimiters[1] == '':
             self.file_organizer_parameters_dict["batch_name_delimiters"] = None
 
         organizer = FileOrganizer(**self.file_organizer_parameters_dict)

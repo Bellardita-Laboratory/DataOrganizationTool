@@ -31,7 +31,7 @@ from PySide6.QtWidgets import (
     )
 
 from FileOrganizer import FileOrganizer
-from UtilsUI import add_input_to_form_layout
+from UtilsUI import add_input_to_form_layout, show_error
 
 # Subclass QMainWindow to customize your application's main window
 class MainWindow(QMainWindow):
@@ -117,7 +117,6 @@ class MainWindow(QMainWindow):
             ("batch_name_delimiters", "Batch name delimiters", [("Start", ''), ("End", '')])
         ]
 
-        # TODO: Allow the user to click to chose the coord
         # Adds these parameters to the form layout
         add_input_to_form_layout(delimiters_form_layout, None, vector_value_parameters, self.file_organizer_parameters_dict)
 
@@ -197,7 +196,7 @@ class MainWindow(QMainWindow):
         print(self.organize_file_parameters_dict)
 
         batch_name_delimiters = self.file_organizer_parameters_dict["batch_name_delimiters"]
-        if batch_name_delimiters[0] == '' and batch_name_delimiters[1] == '':
+        if batch_name_delimiters is None or batch_name_delimiters[0] == '' and batch_name_delimiters[1] == '':
             self.file_organizer_parameters_dict["batch_name_delimiters"] = None
 
         organizer = FileOrganizer(**self.file_organizer_parameters_dict)

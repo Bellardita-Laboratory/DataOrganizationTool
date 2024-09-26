@@ -30,7 +30,7 @@ def get_common_data_name_from_path(filepath:os.PathLike, first_name_delimiter:st
 class FileOrganizer:
     def __init__(self, side_keyword:str, ventral_keyword:str,
                  dataset_name_delimiters:tuple[str,str], mouse_name_delimiters:tuple[str,str], run_name_delimiters:tuple[str,str],
-                 batch_name_delimiters:tuple[str,str]=None, default_batch_name:str='Batch'):
+                 batch_name_delimiters:tuple[str,str]|None=None, default_batch_name:str='Batch'):
         """
             Initialize the file organizer
         """
@@ -59,9 +59,10 @@ class FileOrganizer:
 
         return side_csv_filepaths, ventral_csv_filepaths, video_filepaths
 
-    def _associate_files(self, side_csv_filepaths:list[os.PathLike], ventral_csv_filepaths:list[os.PathLike], video_filepaths:list[os.PathLike]):
+    def _associate_files(self, side_csv_filepaths:list[os.PathLike], ventral_csv_filepaths:list[os.PathLike], video_filepaths:list[os.PathLike],
+                         require_ventral_data:bool, require_video_data:bool):
         """
-            Associate the side views with the corresponding ventral views and video
+            Associate the side views with the corresponding ventral views and video if they exist
         """
         # Get the names of the batch, dataset and mouse for each ventral file
         ventral_csv_data : list[tuple[str,str,str,str]] = []
@@ -90,7 +91,7 @@ class FileOrganizer:
             video_data.append((batch_name, dataset_name, mouse_name, run_name))
 
 
-        associated_paths : list[tuple[str,str,os.PathLike,os.PathLike,os.PathLike]] = []
+        associated_paths : list[tuple[str,str,os.PathLike,os.PathLike|None,os.PathLike|None]] = []
         for side_csv_filepath in side_csv_filepaths:
             # Get the names of the batch, dataset and mouse
             if self.batch_name_delimiters is not None:
@@ -116,25 +117,40 @@ class FileOrganizer:
             if len(ventral_correspondances) == 0:
                 print(f"No corresponding ventral view for {side_csv_filepath}")
 
-                continue
+                # Skip the file if the ventral view is required
+                if require_ventral_data:
+                    print(f"Skipping {side_csv_filepath}")
+                    continue
+
+                ventral_correspondances = [None]
 
             if len(video_correspondances) == 0:
                 print(f"No corresponding video for {side_csv_filepath}")
-                continue
+
+                if require_video_data:
+                    print(f"Skipping {side_csv_filepath}")
+                    continue
+
+                video_correspondances = [None]
 
             # Ensure uniqueness of the corresponding files
             if len(ventral_correspondances) > 1:
                 print(f"Multiple ventral views for {side_csv_filepath} : {ventral_correspondances}")
-                continue
+                print(f"Choosing the first one : {ventral_correspondances[0]}")
+                ventral_correspondances = [ventral_correspondances[0]]
 
             if len(video_correspondances) > 1:
+                print(f"Multiple videos for {side_csv_filepath} : {video_correspondances}")
+
+                # Get the video with no tracking if it exists
                 no_track_vid = [filepath for filepath in video_correspondances if self.side_keyword not in filepath and self.ventral_keyword not in filepath]
 
                 if len(no_track_vid) == 1:
+                    print(f"Choosing the video with no tracking (ie not containing {self.side_keyword} or {self.ventral_keyword}) : {no_track_vid[0]}")
                     video_correspondances = no_track_vid
                 else:
-                    print(f"Multiple videos for {side_csv_filepath} : {video_correspondances}")
-                    continue
+                    print(f"Choosing the first one : {video_correspondances[0]}")
+                    video_correspondances = [video_correspondances[0]]
 
             # Get the corresponding filepaths
             ventral_csv_filepath = ventral_correspondances[0]
@@ -146,7 +162,7 @@ class FileOrganizer:
         return associated_paths
 
 
-    def _copy_with_structure(self, target_folder:str, associated_paths:list[tuple[str,str,os.PathLike,os.PathLike,os.PathLike]],
+    def _copy_with_structure(self, target_folder:str, associated_paths:list[tuple[str,str,os.PathLike,os.PathLike|None,os.PathLike|None]],
                             side_folder_name:str, ventral_folder_name:str, video_folder_name:str):
         """
             Create the folder strucure and copy the files in their corresponding folders
@@ -187,22 +203,27 @@ class FileOrganizer:
 
             ## Copy the files to the corresponding folders
             side_csv_target = os.path.join(side_folder, os.path.basename(side_csv_filepath))
-            ventral_csv_target = os.path.join(ventral_folder, os.path.basename(ventral_csv_filepath))
-            video_target = os.path.join(video_folder, os.path.basename(video_filepath))
-
             shutil.copy2(side_csv_filepath, side_csv_target)
-            shutil.copy2(ventral_csv_filepath, ventral_csv_target)
-            shutil.copy2(video_filepath, video_target)
+
+            if ventral_csv_filepath is not None:
+                ventral_csv_target = os.path.join(ventral_folder, os.path.basename(ventral_csv_filepath))
+                shutil.copy2(ventral_csv_filepath, ventral_csv_target)
+            
+            if video_filepath is not None:
+                video_target = os.path.join(video_folder, os.path.basename(video_filepath))
+                shutil.copy2(video_filepath, video_target)
 
 
     def organize_files(self, data_folder_path:os.PathLike, target_folder_path:os.PathLike,
                        csv_extension:str='.csv', video_extension:str='.mp4',
-                       side_folder_name:str='sideview', ventral_folder_name:str='ventralview', video_folder_name:str='video'):
+                       side_folder_name:str='sideview', ventral_folder_name:str='ventralview', video_folder_name:str='video',
+                       require_ventral_data:bool=False, require_video_data:bool=False):
+        print(require_ventral_data, require_video_data)
         # Get the filepaths to all the files in the corresponding folder
         side_csv_filepaths, ventral_csv_filepaths, video_filepaths = self._get_filepaths(data_folder_path, csv_extension, video_extension)
 
         # Associate the side views with the corresponding ventral views and video
-        associated_paths = self._associate_files(side_csv_filepaths, ventral_csv_filepaths, video_filepaths)
+        associated_paths = self._associate_files(side_csv_filepaths, ventral_csv_filepaths, video_filepaths, require_ventral_data, require_video_data)
         
         # Copy the files to the corresponding folders
         self._copy_with_structure(target_folder_path, associated_paths, side_folder_name, ventral_folder_name, video_folder_name)

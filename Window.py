@@ -202,14 +202,18 @@ class MainWindow(QMainWindow):
 
         organizer = FileOrganizer(**self.file_organizer_parameters_dict)
 
-        organizer.organize_files(**self.organize_file_parameters_dict)
-
-        # Show a message box to inform the user that the files have been organized
-        msg = QMessageBox()
-        msg.setIcon(QMessageBox.Information)
-        msg.setText("Files have been organized")
-        msg.setWindowTitle("Information")
-        msg.exec()
+        try:
+            organizer.organize_files(**self.organize_file_parameters_dict)
+        except Exception as e:
+            show_error(str(e))
+            raise e
+        else:
+            # Show a message box to inform the user that the files have been organized
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Information)
+            msg.setText("Files have been organized")
+            msg.setWindowTitle("Information")
+            msg.exec()
 
 if __name__ == "__main__":
     # You need one (and only one) QApplication instance per application.

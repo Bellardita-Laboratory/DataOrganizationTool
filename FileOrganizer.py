@@ -4,6 +4,7 @@ import os
 import shutil
 
 from tqdm import tqdm
+import regex as re
 
 def get_common_data_name_from_path(filepath:os.PathLike, first_name_delimiter:str, last_name_delimiter:str):
     """
@@ -16,16 +17,16 @@ def get_common_data_name_from_path(filepath:os.PathLike, first_name_delimiter:st
     # Remove the file extension
     data_name, _ = os.path.splitext(data_name_ext)
 
-    # Get the part of the file name before the first occurence of the last delimiter
-    # (or the whole filename if there is no delimiter in it)
-    splitted_data_name = data_name.split(last_name_delimiter)
-    before_name = splitted_data_name[0]
+    # Get the part of the file name between the first occurence of the first delimiter and the first occurence of the last delimiter
+    regexp = f'(?<={first_name_delimiter})((.*)(?={last_name_delimiter}))'
+    name_match = re.search(regexp, data_name)
 
-    # Get the part of the before_name after the last occurence of the first delimiter
-    splitted_data_name = before_name.split(first_name_delimiter)
-    common_name = splitted_data_name[-1]
-
-    return common_name
+    if name_match is not None:
+        common_data_name = name_match.group()
+    else:
+        common_data_name = data_name
+    
+    return common_data_name
 
 class FileOrganizer:
     def __init__(self, side_keyword:str, ventral_keyword:str,
@@ -158,6 +159,8 @@ class FileOrganizer:
 
             # Add the corresponding filepaths to the list
             associated_paths.append((batch_name, dataset_name, side_csv_filepath, ventral_csv_filepath, video_filepath))
+
+
         
         return associated_paths
 
@@ -234,11 +237,14 @@ if __name__ == "__main__":
     target_folder = '.\\DataOrganized'
     side_keyword = 'sideview'
     ventral_keyword = 'ventralview'
+    batch_name_delimiters = ('_Mouse[0-9]+_', '_.*_Corridor_.*_Corridor')
     dataset_name_delimiters = ('CnF_', '_Corridor')
     mouse_name_delimiter = ('ventral_', '_CnF')
     run_name_delimiters = ('eft_', 'DLC')
 
-    fo = FileOrganizer(side_keyword, ventral_keyword, dataset_name_delimiters, mouse_name_delimiter, run_name_delimiters)
+    fo = FileOrganizer(side_keyword, ventral_keyword, dataset_name_delimiters, mouse_name_delimiter, run_name_delimiters, batch_name_delimiters)
 
     fo.organize_files(folder_path, target_folder, csv_extension='.csv', video_extension='.mp4',
                       side_folder_name='sideview', ventral_folder_name='ventralview', video_folder_name='video')
+
+    #get_common_data_name_from_path('.\\Data\\Batch1\\CnF_1_ventral_1_eft_1_DLC.csv', 'CnF_1_', '_1_.*1')

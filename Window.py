@@ -47,6 +47,11 @@ class MainWindow(QMainWindow):
         # Main layout
         v_layout = QVBoxLayout()
 
+        # ## Save/load layout
+        # self.save_load_layout = SaveLoadLayout(self.batch_analyzer)
+        # self.save_load_layout.move_to_tab_signal.connect(self._move_to_max_tab)
+        # self.v_layout.addLayout(self.save_load_layout)
+
 
         ### Folder selection
         folder_selection_group = QGroupBox("Folders selection")
@@ -105,8 +110,24 @@ class MainWindow(QMainWindow):
         delimiters_selection_group.setFlat(True)
         v_layout.addWidget(delimiters_selection_group)
 
+        delimiter_v_layout = QVBoxLayout()
+        delimiters_selection_group.setLayout(delimiter_v_layout)
+
+        delimiters_description = QLabel("""Delimiters support regular expressions. 
+                                        - Use '.' for any character
+                                        - Use '*' for repeating the previous character 0 or more times
+                                        - Use '+' for repeating the previous character 1 or more times
+                                        - Use '?' for repeating the previous character 0 or 1 time
+                                        - Use '()' for grouping characters
+                                        - Use '[' and ']' for specifying a set of characters (eg [0-9] for any digit)
+                                        - Use '^' for negating a set of characters (eg [^0-9] for any character that is not a digit)
+                                        - Use '\\' to escape special characters
+                                        """)
+        delimiters_description.setWordWrap(True)
+        delimiter_v_layout.addWidget(delimiters_description)
+
         delimiters_form_layout = QFormLayout()
-        delimiters_selection_group.setLayout(delimiters_form_layout)
+        delimiter_v_layout.addLayout(delimiters_form_layout)
 
         # TODO: pass these values as parameters instead of hardcoding
         # List of vector value parameters to ask the user (dictionnary key, display parameter name, parameter default value)

@@ -57,8 +57,8 @@ class MainWindow(QMainWindow):
         folder_selection_group.setLayout(folder_form_layout)
 
         self.folder_selection_parameters = [
-            ("data_folder_path", "Data folder", os.path.join('E:', 'Treadmill - no stimulation')),
-            ("target_folder_path", "Target folder", os.path.join('E:', 'NewTreadmilTest'))
+            ("data_folder_path", "Data folder", os.path.abspath('.')),
+            ("target_folder_path", "Target folder", os.path.abspath('.'))
             ]
 
         # Instantiate the folder selection widgets

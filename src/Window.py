@@ -74,7 +74,7 @@ class MainWindow(QMainWindow):
         self._disable_tabs_from(self.data_selection_tab)
 
         # Actualize the crop compensation widget UI
-        self.structure_selection_tab.actualize_UI()
+        self.structure_selection_tab.actualize_names()
 
         # Turn on the crop compensation and param 3D tab
         self._enable_and_set_current_tab(self.structure_selection_tab, [self.structure_selection_tab])

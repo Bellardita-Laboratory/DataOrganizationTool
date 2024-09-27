@@ -1,21 +1,19 @@
-from PySide6.QtCore import Qt, Signal, QSortFilterProxyModel, QStringListModel, QLocale
+from PySide6.QtCore import Signal, QLocale, QThread, QObject
 from PySide6.QtGui import QValidator, QDoubleValidator
 from PySide6.QtWidgets import (
-    QWidget,
-    QPushButton,
     QHBoxLayout,
     QVBoxLayout,
     QLabel,
-    QListWidget,
-    QListWidgetItem,
-    QStackedLayout,
-    QAbstractItemView,
     QComboBox,
-    QCompleter,
     QFormLayout,
     QLineEdit,
-    QMessageBox
+    QMessageBox,    
+    QMessageBox,
+    QProgressBar,
+    QFileDialog
     )
+
+from enum import StrEnum
 
 class PositiveFloatValidator(QDoubleValidator):
     """
@@ -101,19 +99,38 @@ def tryconvert(value, default, *types):
             continue
     return default
 
+class MessageType(StrEnum):
+    ERROR = "Error"
+    WARNING = "Warning"
+    INFORMATION = "Message"
 
-def show_error(error_msg:str):
+def show_message(msg_txt:str, message_type:MessageType):
     """
-        Displays an error message window with the message error_msg
+        Displays an message window with the message msg_txt
+        The window display changes accordingly with the message type
     """
+    msg_type_str = message_type.value
+    if message_type == MessageType.ERROR:
+        msg_icon = QMessageBox.Critical
+    elif message_type == MessageType.WARNING:
+        msg_icon = QMessageBox.Warning
+    else:
+        msg_icon = QMessageBox.Information
+
     msg = QMessageBox()
-    msg.setIcon(QMessageBox.Critical)
-    msg.setText("Error")
-    msg.setInformativeText(error_msg)
-    msg.setWindowTitle("Error")
+    msg.setIcon(msg_icon)
+    msg.setText(msg_type_str)
+    msg.setInformativeText(msg_txt)
+    msg.setWindowTitle(msg_type_str)
     msg.exec()
 
     return
+
+def get_user_folder_path(label:str, default_dir:str=""):
+    """
+        Asks the user to select a directory and returns it
+    """
+    return str(QFileDialog.getExistingDirectory(caption=label, dir=default_dir))
 
 def create_combo_box_layout(label_str:str, combo_box:QComboBox):
     """
@@ -189,3 +206,49 @@ def add_input_to_form_layout(form_layout:QFormLayout, validator:QValidator, para
         param_line_edit_dict[param_key] = param_line_edit
 
     return param_line_edit_dict
+
+
+def setup_loading_bar(loading_bar:QProgressBar, max_value:int=0):
+    """
+        Setup the loading bar with the maximum value
+
+        If max_value is 0 (or none is given), the loading bar will display a busy indicator
+    """
+    loading_bar.setMinimum(0)
+    loading_bar.setMaximum(max_value)
+
+    if max_value == 0:
+        loading_bar.setFormat("Loading...")
+    else:
+        loading_bar.resetFormat()
+        
+    loading_bar.reset()
+
+def update_loading_bar(loading_bar:QProgressBar, value:int):
+    """
+        Update the loading bar with the new value
+    """
+    loading_bar.setValue(value)
+
+def delete_thread(thread:QThread):
+    """
+        Stops the thread
+    """
+    thread.quit()
+    thread.wait()
+    thread.deleteLater()
+    thread = None
+
+def delete_worker_thread(worker:QObject|None, thread:QThread|None):
+    """
+        Deletes the worker and the thread
+    """
+    if worker is not None:
+        worker.deleteLater()
+        worker = None
+
+    if thread is not None:
+        delete_thread(thread)
+        thread = None
+
+    return worker, thread

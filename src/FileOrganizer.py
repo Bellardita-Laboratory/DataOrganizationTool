@@ -29,22 +29,45 @@ def get_common_data_name_from_path(filepath:os.PathLike, first_name_delimiter:st
     return common_data_name
 
 class FileOrganizer:
-    def __init__(self, side_keyword:str, ventral_keyword:str,
-                 dataset_name_delimiters:tuple[str,str], mouse_name_delimiters:tuple[str,str], run_name_delimiters:tuple[str,str],
-                 batch_name_delimiters:tuple[str,str]|None=None, default_batch_name:str='Batch'):
+    def set_and_load_data_parameters(self,side_keyword:str, ventral_keyword:str,
+                                    data_folder_path:os.PathLike, target_folder_path:os.PathLike,
+                                    csv_extension:str, video_extension:str):
         """
-            Initialize the file organizer
+            Set the data parameters and load the filepaths
         """
         self.side_keyword = side_keyword
         self.ventral_keyword = ventral_keyword
 
-        self.dataset_name_delimiters = dataset_name_delimiters
-        self.mouse_name_delimiters = mouse_name_delimiters
-        self.run_name_delimiters = run_name_delimiters
-        self.batch_name_delimiters = batch_name_delimiters
+        self.data_folder_path = data_folder_path
+        self.target_folder_path = target_folder_path
+        self.csv_extension = csv_extension
+        self.video_extension = video_extension
 
-        self.default_batch_name = default_batch_name
+        # Load the filepaths to all the files in the corresponding folder
+        self.side_csv_filepaths, self.ventral_csv_filepaths, self.video_filepaths = self._get_filepaths(self.data_folder_path, self.csv_extension, self.video_extension)
 
+    def set_structure_parameters(self, default_batch_name:str,
+                                    dataset_name_delimiters:tuple[str,str], mouse_name_delimiters:tuple[str,str], run_name_delimiters:tuple[str,str],
+                                    batch_name_delimiters:tuple[str,str]|None):
+            """
+                Set the structure parameters
+            """    
+            self.dataset_name_delimiters = dataset_name_delimiters
+            self.mouse_name_delimiters = mouse_name_delimiters
+            self.run_name_delimiters = run_name_delimiters
+            self.batch_name_delimiters = batch_name_delimiters
+    
+            self.default_batch_name = default_batch_name
+
+    def organize_files(self, side_folder_name:str='sideview', ventral_folder_name:str='ventralview', video_folder_name:str='video',
+                       require_ventral_data:bool=False, require_video_data:bool=False):
+        # Associate the side views with the corresponding ventral views and video
+        associated_paths = self._associate_files(self.side_csv_filepaths, self.ventral_csv_filepaths, self.video_filepaths, require_ventral_data, require_video_data)
+        
+        # Copy the files to the corresponding folders
+        self._copy_with_structure(self.target_folder_path, associated_paths, side_folder_name, ventral_folder_name, video_folder_name)
+
+    
     def _get_filepaths(self, folder_path:os.PathLike, csv_extension:str, video_extension:str):
         """
             Get the filepaths to all the files in the corresponding folder
@@ -160,10 +183,7 @@ class FileOrganizer:
             # Add the corresponding filepaths to the list
             associated_paths.append((batch_name, dataset_name, side_csv_filepath, ventral_csv_filepath, video_filepath))
 
-
-        
         return associated_paths
-
 
     def _copy_with_structure(self, target_folder:str, associated_paths:list[tuple[str,str,os.PathLike,os.PathLike|None,os.PathLike|None]],
                             side_folder_name:str, ventral_folder_name:str, video_folder_name:str):
@@ -215,21 +235,6 @@ class FileOrganizer:
             if video_filepath is not None:
                 video_target = os.path.join(video_folder, os.path.basename(video_filepath))
                 shutil.copy2(video_filepath, video_target)
-
-
-    def organize_files(self, data_folder_path:os.PathLike, target_folder_path:os.PathLike,
-                       csv_extension:str='.csv', video_extension:str='.mp4',
-                       side_folder_name:str='sideview', ventral_folder_name:str='ventralview', video_folder_name:str='video',
-                       require_ventral_data:bool=False, require_video_data:bool=False):
-        print(require_ventral_data, require_video_data)
-        # Get the filepaths to all the files in the corresponding folder
-        side_csv_filepaths, ventral_csv_filepaths, video_filepaths = self._get_filepaths(data_folder_path, csv_extension, video_extension)
-
-        # Associate the side views with the corresponding ventral views and video
-        associated_paths = self._associate_files(side_csv_filepaths, ventral_csv_filepaths, video_filepaths, require_ventral_data, require_video_data)
-        
-        # Copy the files to the corresponding folders
-        self._copy_with_structure(target_folder_path, associated_paths, side_folder_name, ventral_folder_name, video_folder_name)
     
 
 if __name__ == "__main__":

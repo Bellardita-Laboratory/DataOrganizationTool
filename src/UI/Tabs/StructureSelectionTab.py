@@ -1,5 +1,6 @@
 import os
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QSyntaxHighlighter, QTextCharFormat
 from PySide6.QtWidgets import (
     QWidget,
     QGroupBox,
@@ -9,7 +10,8 @@ from PySide6.QtWidgets import (
     QLabel,
     QPushButton,
     QListWidget,
-    QTextEdit
+    QTextEdit,
+    QPlainTextEdit
 )
 
 import regex as re
@@ -18,31 +20,39 @@ from UI.Tabs.TabWidget import TabWidget
 from UI.UtilsUI import get_user_folder_path, add_input_to_form_layout, MessageType
 from FileOrganizer import FileOrganizer
 
+class Highlighter(QSyntaxHighlighter):
+    def __init__(self, parent=None):
+        QSyntaxHighlighter.__init__(self, parent)
+
+        self._mappings = {}
+
+    def add_mapping(self, pattern, format):
+        self._mappings[pattern] = format
+
+    def highlightBlock(self, text):
+        print(text)
+        for pattern, format in self._mappings.items():
+            for match in re.finditer(pattern, text):
+                start, end = match.span()
+                self.setFormat(start, end - start, format)
+
 class StructureSelectionTab(TabWidget):
     """
         Tab to select the structure parameters
     """
-    # # List of delimiters parameters to ask the user (dictionnary key, display parameter name, parameter default value)
-    # delimiters_parameters : dict[tuple[str, str, list[tuple[str,str]]]] = [
-    #     ("batch_name_delimiters", "Batch name delimiters (The name of the batch is between 'Start' and 'End' in the file name)\n!- Leave empty for only one batch with the default batch name", [("Start", ''), ("End", '')]),
-    #     ("dataset_name_delimiters", "Dataset name delimiters (The name of the dataset is between 'Start' and 'End' in the file name)", [("Start", "CnF_"), ("End", "_Test")]),
-    #     ("mouse_name_delimiters", "Mouse name delimiters (The name of the mouse is between 'Start' and 'End' in the file name)", [("Start", "ventral_"), ("End", "_CnF")]),
-    #     ("run_name_delimiters", "Run name delimiters (The name of the run is between 'Start' and 'End' in the file name)", [("Start", "Treadmill"), ("End", "DLC")])
-    # ]
 
-    structure_str_paramters : list[tuple[str, str, str]] = [
-        ("structure_str", """Structure of the file names: use '(' and ')' to capture a group
+    structure_str_paramters : tuple[str, str, str] = (
+        "structure_str", 
+        """Structure of the file names: use '(' and ')' to capture a group
     A group can be Batch, Dataset, Mouse or Run
-         eg: (Batch)_(Dataset)_(Mouse)_(Run)""", "_Mouse(Mouse)_CnF_(Dataset)[_Test]?_(Batch)_[L|l]eft_Run(Run)DLC")
-    ]
+         eg: (Batch)_(Dataset)_(Mouse)_(Run)""", 
+        "_Mouse(Mouse)_CnF_(Dataset)[_Test]?_(Batch)_[L|l]eft_Run(Run)DLC"
+    )
 
-    # structure_str_paramters : tuple[str, str, str] = (
-    #     "structure_str", 
-    #     """Structure of the file names: use '(' and ')' to capture a group
-    # A group can be Batch, Dataset, Mouse or Run
-    #      eg: (Batch)_(Dataset)_(Mouse)_(Run)""", 
-    #     "_Mouse(Mouse)_CnF_(Dataset)[_Test]?_(Batch)_[L|l]eft_Run(Run)DLC"
-    # )
+    # Structure parameters
+    delimiters_keywords:list[str]=['Batch', 'Dataset', 'Mouse', 'Run']
+    delimiter_opener:str='('
+    delimiter_closer:str=')'
 
     # List of parameters names to display in the list widget
     name_list_parameters : list[str] = ["Batch", "Dataset", "Mouse", "Run"]
@@ -94,18 +104,30 @@ Examples:
         delimiters_form_layout = QFormLayout()
         delimiter_v_layout.addLayout(delimiters_form_layout)
 
-        structure_str_input_dict = add_input_to_form_layout(delimiters_form_layout, None, StructureSelectionTab.structure_str_paramters, self.structure_str_parameters_dict)
+        # Create the input for the structure string
+        self.structure_str_input = QPlainTextEdit(StructureSelectionTab.structure_str_paramters[2])
+        self.structure_str_input.setFixedHeight(30)
 
-        for _, struture_str_input in structure_str_input_dict.items():
-           struture_str_input.textChanged.connect(self.actualize_names)
-
-        # self.structure_str_input = QTextEdit(StructureSelectionTab.structure_str_paramters[2])
-        # self._actualize_input_name()
-        # self.structure_str_input.setAcceptRichText(True)
-        # self.structure_str_input.textChanged.connect(self._actualize_input_name)
-        # self.structure_str_input.textChanged.connect(self.actualize_names)
+        # Connect the signal to actualize the input name
+        self._actualize_input_name()
+        self.structure_str_input.textChanged.connect(self._actualize_input_name)
+        self.structure_str_input.textChanged.connect(self.actualize_names)
         
-        # delimiters_form_layout.addRow(StructureSelectionTab.structure_str_paramters[1], self.structure_str_input)
+        delimiters_form_layout.addRow(StructureSelectionTab.structure_str_paramters[1], self.structure_str_input)
+
+        # Create the highlighter
+        self.highlighter = Highlighter()
+
+        # Add the mappings
+        for keyword in StructureSelectionTab.delimiters_keywords:
+            delimited_keyword = f"\{StructureSelectionTab.delimiter_opener}{keyword}\{StructureSelectionTab.delimiter_closer}"
+            
+            kw_format = QTextCharFormat()
+            kw_format.setFontItalic(True)
+            kw_format.setForeground(Qt.red)
+            self.highlighter.add_mapping(delimited_keyword, kw_format)
+
+        self.highlighter.setDocument(self.structure_str_input.document())
 
 
         ### Names display
@@ -137,12 +159,7 @@ Examples:
             Actualize the input name display
         """
         new_text = self.structure_str_input.toPlainText()
-        print(new_text)
         self.structure_str_parameters_dict[StructureSelectionTab.structure_str_paramters[0]] = new_text
-
-        self.structure_str_input.blockSignals(True)
-        self.structure_str_input.setText(new_text)
-        self.structure_str_input.blockSignals(False)
         
     def actualize_names(self):
         """
@@ -153,7 +170,7 @@ Examples:
 
         # Get the associated names
         try:
-            associated_names = self.file_organizer.get_names()
+            associated_names = self.file_organizer.get_names(StructureSelectionTab.delimiters_keywords, StructureSelectionTab.delimiter_opener, StructureSelectionTab.delimiter_closer)
         except re.error as e:
             self._update_name_display(f"Error in the regular expression: {e}", MessageType.ERROR)
             return

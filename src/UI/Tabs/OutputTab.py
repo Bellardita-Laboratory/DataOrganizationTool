@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 from UI.Tabs.TabWidget import TabWidget
 from UI.UtilsUI import MessageType, show_message, add_input_to_form_layout
 from FileOrganizer import FileOrganizer
+from UI.Tabs.StructureSelectionTab import StructureSelectionTab
 
 class OutputTab(TabWidget):
     """
@@ -91,7 +92,8 @@ class OutputTab(TabWidget):
 
     def _organize_btn_clicked(self):
         try:
-            self.file_organizer.organize_files(**self.output_parameters_dict)
+            self.file_organizer.organize_files(**self.output_parameters_dict,
+                                               delimiters_keywords=StructureSelectionTab.delimiters_keywords, delimiter_opener=StructureSelectionTab.delimiter_opener, delimiter_closer=StructureSelectionTab.delimiter_closer)
         except Exception as e:
             show_message(str(e), MessageType.ERROR)
             raise e

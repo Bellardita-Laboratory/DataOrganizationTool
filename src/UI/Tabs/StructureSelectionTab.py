@@ -8,7 +8,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QLabel,
     QPushButton,
-    QListWidget
+    QListWidget,
+    QTextEdit
 )
 
 import regex as re
@@ -21,18 +22,27 @@ class StructureSelectionTab(TabWidget):
     """
         Tab to select the structure parameters
     """
-    # List of structure parameters to ask the user (dictionnary key, display parameter name, parameter default value)
-    structure_parameters : list[tuple[str, str, str]] = [
-        ("default_batch_name", "Default batch name (Name of the batch folder to create in case no batch name is found from the data's file name)", "Batch")
+    # # List of delimiters parameters to ask the user (dictionnary key, display parameter name, parameter default value)
+    # delimiters_parameters : dict[tuple[str, str, list[tuple[str,str]]]] = [
+    #     ("batch_name_delimiters", "Batch name delimiters (The name of the batch is between 'Start' and 'End' in the file name)\n!- Leave empty for only one batch with the default batch name", [("Start", ''), ("End", '')]),
+    #     ("dataset_name_delimiters", "Dataset name delimiters (The name of the dataset is between 'Start' and 'End' in the file name)", [("Start", "CnF_"), ("End", "_Test")]),
+    #     ("mouse_name_delimiters", "Mouse name delimiters (The name of the mouse is between 'Start' and 'End' in the file name)", [("Start", "ventral_"), ("End", "_CnF")]),
+    #     ("run_name_delimiters", "Run name delimiters (The name of the run is between 'Start' and 'End' in the file name)", [("Start", "Treadmill"), ("End", "DLC")])
+    # ]
+
+    structure_str_paramters : list[tuple[str, str, str]] = [
+        ("structure_str", """Structure of the file names: use '(' and ')' to capture a group
+    A group can be Batch, Dataset, Mouse or Run
+         eg: (Batch)_(Dataset)_(Mouse)_(Run)""", "_Mouse(Mouse)_CnF_(Dataset)[_Test]?_(Batch)_[L|l]eft_Run(Run)DLC")
     ]
 
-    # List of delimiters parameters to ask the user (dictionnary key, display parameter name, parameter default value)
-    delimiters_parameters : dict[tuple[str, str, list[tuple[str,str]]]] = [
-        ("dataset_name_delimiters", "Dataset name delimiters (The name of the dataset is between 'Start' and 'End' in the file name)", [("Start", "CnF_"), ("End", "_Test")]),
-        ("mouse_name_delimiters", "Mouse name delimiters (The name of the mouse is between 'Start' and 'End' in the file name)", [("Start", "ventral_"), ("End", "_CnF")]),
-        ("run_name_delimiters", "Run name delimiters (The name of the run is between 'Start' and 'End' in the file name)", [("Start", "Treadmill"), ("End", "DLC")]),
-        ("batch_name_delimiters", "Batch name delimiters (The name of the batch is between 'Start' and 'End' in the file name)\n!- Leave empty for only one batch with the default batch name", [("Start", ''), ("End", '')])
-    ]
+    # structure_str_paramters : tuple[str, str, str] = (
+    #     "structure_str", 
+    #     """Structure of the file names: use '(' and ')' to capture a group
+    # A group can be Batch, Dataset, Mouse or Run
+    #      eg: (Batch)_(Dataset)_(Mouse)_(Run)""", 
+    #     "_Mouse(Mouse)_CnF_(Dataset)[_Test]?_(Batch)_[L|l]eft_Run(Run)DLC"
+    # )
 
     # List of parameters names to display in the list widget
     name_list_parameters : list[str] = ["Batch", "Dataset", "Mouse", "Run"]
@@ -41,7 +51,7 @@ class StructureSelectionTab(TabWidget):
         super().__init__(parent)
 
         self.file_organizer = file_organizer
-        self.structure_parameters_dict : dict[str, str|tuple[str,str]] = dict()
+        self.structure_str_parameters_dict : dict[str, str] = dict()
         self.list_widget_dict : dict[str, QListWidget] = dict()
 
         self._setup_ui()
@@ -53,21 +63,6 @@ class StructureSelectionTab(TabWidget):
         v_layout = QVBoxLayout()
         self.setLayout(v_layout)
 
-        ### Parameters selection
-        parameters_selection_group = QGroupBox("Parameters")
-        parameters_selection_group.setFlat(True)
-        v_layout.addWidget(parameters_selection_group)
-
-        parameters_form_layout = QFormLayout()
-        parameters_selection_group.setLayout(parameters_form_layout)
-
-        # Adds these parameters to the form layout
-        line_edit_dict = add_input_to_form_layout(parameters_form_layout, None, StructureSelectionTab.structure_parameters, self.structure_parameters_dict)
-
-        for _, line_edit in line_edit_dict.items():
-            line_edit.textChanged.connect(self.actualize_names)
-
-
         ### Delimiters selection
         delimiters_selection_group = QGroupBox("Delimiters")
         delimiters_selection_group.setFlat(True)
@@ -76,27 +71,41 @@ class StructureSelectionTab(TabWidget):
         delimiter_v_layout = QVBoxLayout()
         delimiters_selection_group.setLayout(delimiter_v_layout)
 
-        delimiters_description = QLabel("""Delimiters support regular expressions. 
+        delimiters_description = QLabel("""Structure supports regular expressions. 
                                         - Use '.' for any character
                                         - Use '*' for repeating the previous character 0 or more times
                                         - Use '+' for repeating the previous character 1 or more times
                                         - Use '?' for repeating the previous character 0 or 1 time
-                                        - Use '()' for grouping characters
                                         - Use '[' and ']' for specifying a set of characters (eg [0-9] for any digit)
                                         - Use '^' for negating a set of characters (eg [^0-9] for any character that is not a digit)
                                         - Use '\\' to escape special characters
-                                        """)
+                                        - Use '|' for or (eg 'a|b' for 'a' or 'b')
+                                        - Use '^' at the start to specify the start of the string
+                                        - Use '$' at the end to specify the end of the string
+
+Examples:
+    - If the file name is 'Batch1_Dataset3_Mouse245_Run78', we can use 'Batch(Batch)_Dataset(Dataset)_Mouse(Mouse)_Run(Run)'
+        It will find '1' for the batch name, '3' for the dataset name, '245' for the mouse name and '78' for the run name
+                                        """
+        )
         delimiters_description.setWordWrap(True)
         delimiter_v_layout.addWidget(delimiters_description)
 
         delimiters_form_layout = QFormLayout()
         delimiter_v_layout.addLayout(delimiters_form_layout)
 
-        # Adds these parameters to the form layout
-        vector_input_dict = add_input_to_form_layout(delimiters_form_layout, None, StructureSelectionTab.delimiters_parameters, self.structure_parameters_dict)
+        structure_str_input_dict = add_input_to_form_layout(delimiters_form_layout, None, StructureSelectionTab.structure_str_paramters, self.structure_str_parameters_dict)
 
-        for _, vector_input in vector_input_dict.items():
-            vector_input.textChanged.connect(self.actualize_names)
+        for _, struture_str_input in structure_str_input_dict.items():
+           struture_str_input.textChanged.connect(self.actualize_names)
+
+        # self.structure_str_input = QTextEdit(StructureSelectionTab.structure_str_paramters[2])
+        # self._actualize_input_name()
+        # self.structure_str_input.setAcceptRichText(True)
+        # self.structure_str_input.textChanged.connect(self._actualize_input_name)
+        # self.structure_str_input.textChanged.connect(self.actualize_names)
+        
+        # delimiters_form_layout.addRow(StructureSelectionTab.structure_str_paramters[1], self.structure_str_input)
 
 
         ### Names display
@@ -123,6 +132,18 @@ class StructureSelectionTab(TabWidget):
         next_btn.clicked.connect(self._next_btn_clicked)
         v_layout.addWidget(next_btn)
 
+    def _actualize_input_name(self):
+        """
+            Actualize the input name display
+        """
+        new_text = self.structure_str_input.toPlainText()
+        print(new_text)
+        self.structure_str_parameters_dict[StructureSelectionTab.structure_str_paramters[0]] = new_text
+
+        self.structure_str_input.blockSignals(True)
+        self.structure_str_input.setText(new_text)
+        self.structure_str_input.blockSignals(False)
+        
     def actualize_names(self):
         """
             Actualize the UI of the tab
@@ -170,10 +191,6 @@ class StructureSelectionTab(TabWidget):
         mouse_names = list(set(mouse_names))
         run_names = list(set(run_names))
 
-        # If the batch names list is empty, set it to the default batch name
-        if len(batch_names) == 0 or batch_names[0] == '':
-            batch_names = [self.structure_parameters_dict["default_batch_name"]]
-
         self._actualize_list_widget("Batch", batch_names)
         self._actualize_list_widget("Dataset", dataset_names)
         self._actualize_list_widget("Mouse", mouse_names)
@@ -201,10 +218,5 @@ class StructureSelectionTab(TabWidget):
         """
             Set the structure parameters in the file organizer
         """
-        # Check if the batch delimiters are empty, if so set them to None
-        batch_name_delimiters = self.structure_parameters_dict["batch_name_delimiters"]
-        if batch_name_delimiters is not None and batch_name_delimiters[0] == '' and batch_name_delimiters[1] == '':
-            self.structure_parameters_dict["batch_name_delimiters"] = None
-
         # Save the structure parameters
-        self.file_organizer.set_structure_parameters(**self.structure_parameters_dict)
+        self.file_organizer.set_structure_str_parameters(**self.structure_str_parameters_dict)

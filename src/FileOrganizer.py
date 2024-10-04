@@ -6,10 +6,14 @@ import shutil
 from tqdm import tqdm
 import regex as re
 
-def get_common_data_name_from_path(filepath:os.PathLike, first_name_delimiter:str, last_name_delimiter:str):
+def capture_variables_from_file(filepath:os.PathLike, structure_str:str, 
+        delimiters_keywords:list[str]=['Batch', 'Dataset', 'Mouse', 'Run'], delimiter_opener:str='(', delimiter_closer:str=')'):
     """
-        Get the filename, returns the part between the delimiters if it exists in the filename
-        Otherwise returns the whole file name
+        Get the filename, returns 
+            - True if the structure matches the file name, False otherwise
+            - The file name
+            - A dictionnary with the part maching the delimiters_keywords (surrounded by the opener/closer) in the structure string
+                If a part is not found, the corresponding key will have the whole file name as value
     """
     # Get the file name
     data_name_ext : str = os.path.basename(filepath)
@@ -17,17 +21,27 @@ def get_common_data_name_from_path(filepath:os.PathLike, first_name_delimiter:st
     # Remove the file extension
     data_name, _ = os.path.splitext(data_name_ext)
 
-    # Get the part of the file name between the first occurence of the first delimiter and the first occurence of the last delimiter
-    regexp = f'(?<={first_name_delimiter})((.*)(?={last_name_delimiter}))'
+    regexp = structure_str
+    # Replace {keyword} by (.*) in the structure string to capture the corresponding part of the file name
+    for keyword in delimiters_keywords:
+        delimited_keyword = f'{delimiter_opener}{keyword}{delimiter_closer}'
+        regexp = regexp.replace(delimited_keyword, f'(?P<{keyword}>.*)', 1)
 
     name_match = re.search(regexp, data_name)
-
-    if name_match is not None:
-        common_data_name = name_match.group()
-    else:
-        common_data_name = data_name
     
-    return common_data_name
+    if name_match is not None:
+        match_dict : dict[str,str] = dict()
+
+        for keyword in delimiters_keywords:
+            try:
+                match_dict[keyword] = name_match.group(keyword)
+            except IndexError:
+                match_dict[keyword] = data_name
+    else:
+        match_dict = None
+    
+    return name_match is not None, data_name, match_dict
+
 
 class FileOrganizer:
     def set_and_load_data_parameters(self,side_keyword:str, ventral_keyword:str,
@@ -47,25 +61,19 @@ class FileOrganizer:
         # Load the filepaths to all the files in the corresponding folder
         self.side_csv_filepaths, self.ventral_csv_filepaths, self.video_filepaths = self._get_filepaths(self.data_folder_path, self.csv_extension, self.video_extension)
 
-    def set_structure_parameters(self, default_batch_name:str,
-                                    dataset_name_delimiters:tuple[str,str], mouse_name_delimiters:tuple[str,str], run_name_delimiters:tuple[str,str],
-                                    batch_name_delimiters:tuple[str,str]|None):
-        """
-            Set the structure parameters
-        """    
-        self.dataset_name_delimiters = dataset_name_delimiters
-        self.mouse_name_delimiters = mouse_name_delimiters
-        self.run_name_delimiters = run_name_delimiters
-        self.batch_name_delimiters = batch_name_delimiters
 
-        self.default_batch_name = default_batch_name
+    def set_structure_str_parameters(self, structure_str:str):
+        """
+            Set the structure string parameters
+        """
+        self.structure_str = structure_str
     
     def get_names(self):
         """
             Get the names of the batch, dataset, mouse and run for each filepath loaded
         """
         # Associate the side views with the corresponding ventral views and video
-        associated_paths_and_names = self._associate_files(self.side_csv_filepaths, self.ventral_csv_filepaths, self.video_filepaths, False, False, verbose=False)
+        associated_paths_and_names = self._associate_files_from_structure(self.side_csv_filepaths, self.ventral_csv_filepaths, self.video_filepaths, False, False, verbose=False)
 
         # Get the names of the batch, dataset, mouse and run for each ventral file
         associated_names = [(batch_name, dataset_name, mouse_name, run_name) 
@@ -76,7 +84,7 @@ class FileOrganizer:
     def organize_files(self, side_folder_name:str='sideview', ventral_folder_name:str='ventralview', video_folder_name:str='video',
                        require_ventral_data:bool=False, require_video_data:bool=False):
         # Associate the side views with the corresponding ventral views and video
-        associated_paths_and_names = self._associate_files(self.side_csv_filepaths, self.ventral_csv_filepaths, self.video_filepaths, require_ventral_data, require_video_data)
+        associated_paths_and_names = self._associate_files_from_structure(self.side_csv_filepaths, self.ventral_csv_filepaths, self.video_filepaths, require_ventral_data, require_video_data)
 
         # Remove the mouse name and run name from the associated names (they are not needed for the folder structure)
         associated_paths = [(batch_name, dataset_name, side_csv_filepath, ventral_csv_filepath, video_filepath) 
@@ -101,7 +109,7 @@ class FileOrganizer:
 
         return side_csv_filepaths, ventral_csv_filepaths, video_filepaths
 
-    def _associate_files(self, side_csv_filepaths:list[os.PathLike], ventral_csv_filepaths:list[os.PathLike], video_filepaths:list[os.PathLike],
+    def _associate_files_from_structure(self, side_csv_filepaths:list[os.PathLike], ventral_csv_filepaths:list[os.PathLike], video_filepaths:list[os.PathLike],
                          require_ventral_data:bool, require_video_data:bool, verbose:bool=True):
         """
             Associate the side views with the corresponding ventral views and video if they exist
@@ -109,42 +117,59 @@ class FileOrganizer:
         # Get the names of the batch, dataset and mouse for each ventral file
         ventral_csv_data : list[tuple[str,str,str,str]] = []
         for ventral_csv_filepath in ventral_csv_filepaths:
-            if self.batch_name_delimiters is not None:
-                batch_name = get_common_data_name_from_path(ventral_csv_filepath, self.batch_name_delimiters[0], self.batch_name_delimiters[1])
+            match_found, file_name, captured_ventral_dict = capture_variables_from_file(ventral_csv_filepath, self.structure_str)
+
+            # If the structure doesn't match the file
+            if not match_found:
+                if verbose: print(f"Structure does not match the file {ventral_csv_filepath}")
+                batch_name = file_name
+                dataset_name = file_name
+                mouse_name = file_name
+                run_name = file_name
             else:
-                batch_name = ''
-            
-            dataset_name = get_common_data_name_from_path(ventral_csv_filepath, self.dataset_name_delimiters[0], self.dataset_name_delimiters[1])
-            mouse_name = get_common_data_name_from_path(ventral_csv_filepath, self.mouse_name_delimiters[0], self.mouse_name_delimiters[1])
-            run_name = get_common_data_name_from_path(ventral_csv_filepath, self.run_name_delimiters[0], self.run_name_delimiters[1])
+                batch_name = captured_ventral_dict['Batch']
+                dataset_name = captured_ventral_dict['Dataset']
+                mouse_name = captured_ventral_dict['Mouse']
+                run_name = captured_ventral_dict['Run']
+
             ventral_csv_data.append((batch_name, dataset_name, mouse_name, run_name))
 
         # Get the names of the batch, dataset and mouse for each video file
         video_data : list[tuple[str,str,str,str]] = []
         for video_filepath in video_filepaths:
-            if self.batch_name_delimiters is not None:
-                batch_name = get_common_data_name_from_path(video_filepath, self.batch_name_delimiters[0], self.batch_name_delimiters[1])
+            match_found, file_name, captured_video_dict = capture_variables_from_file(video_filepath, self.structure_str)
+
+            # If the structure doesn't match the file
+            if not match_found:
+                if verbose: print(f"Structure does not match the file {video_filepath}")
+                batch_name = file_name
+                dataset_name = file_name
+                mouse_name = file_name
+                run_name = file_name
             else:
-                batch_name = ''
-            
-            dataset_name = get_common_data_name_from_path(video_filepath, self.dataset_name_delimiters[0], self.dataset_name_delimiters[1])
-            mouse_name = get_common_data_name_from_path(video_filepath, self.mouse_name_delimiters[0], self.mouse_name_delimiters[1])
-            run_name = get_common_data_name_from_path(video_filepath, self.run_name_delimiters[0], self.run_name_delimiters[1])
+                batch_name = captured_video_dict['Batch']
+                dataset_name = captured_video_dict['Dataset']
+                mouse_name = captured_video_dict['Mouse']
+                run_name = captured_video_dict['Run']
+
             video_data.append((batch_name, dataset_name, mouse_name, run_name))
 
 
         associated_paths : list[tuple[str,str,str,str, os.PathLike,os.PathLike|None,os.PathLike|None]] = []
         for side_csv_filepath in side_csv_filepaths:
-            # Get the names of the batch, dataset and mouse
-            if self.batch_name_delimiters is not None:
-                batch_name = get_common_data_name_from_path(side_csv_filepath, self.batch_name_delimiters[0], self.batch_name_delimiters[1])
-            else:
-                batch_name = ''
-            
-            dataset_name = get_common_data_name_from_path(side_csv_filepath, self.dataset_name_delimiters[0], self.dataset_name_delimiters[1])
-            mouse_name = get_common_data_name_from_path(side_csv_filepath, self.mouse_name_delimiters[0], self.mouse_name_delimiters[1])
-            run_name = get_common_data_name_from_path(side_csv_filepath, self.run_name_delimiters[0], self.run_name_delimiters[1])
+            match_found, file_name, captured_side_dict = capture_variables_from_file(side_csv_filepath, self.structure_str)
 
+            if not match_found:
+                if verbose: print(f"Structure does not match the file {side_csv_filepath}")
+                batch_name = file_name
+                dataset_name = file_name
+                mouse_name = file_name
+                run_name = file_name
+            else:
+                batch_name = captured_side_dict['Batch']
+                dataset_name = captured_side_dict['Dataset']
+                mouse_name = captured_side_dict['Mouse']
+                run_name = captured_side_dict['Run']
 
             # Get the corresponding video file
             ventral_correspondances = [ventral_csv_filepaths[i] for i in range(len(ventral_csv_filepaths)) 
@@ -270,5 +295,5 @@ if __name__ == "__main__":
     # fo.organize_files(folder_path, target_folder, csv_extension='.csv', video_extension='.mp4',
     #                   side_folder_name='sideview', ventral_folder_name='ventralview', video_folder_name='video')
 
-    val = get_common_data_name_from_path('.\\Data\\Batch1\\CnF_1_ventral_1_eft_1_DLC.csv', 'CnF_1_', '_1_.*1')
+    val = capture_variables_from_file('.\\Data\\Batch1\\CnF_1_ventral_1_eft_1_DLC.csv', '(Batch)_(Dataset)_ventral_1_eft_(Run)_DLC')
     print(val)

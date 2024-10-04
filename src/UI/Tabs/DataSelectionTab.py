@@ -31,8 +31,8 @@ class DataSelectionTab(TabWidget):
 
     # List of keywords parameters to ask the user (dictionnary key, display parameter name, parameter default value)
     keyword_parameters : list[tuple[str, str, str]] = [
-        ("side_keyword", "Side keyword", "sideview"),
-        ("ventral_keyword", "Ventral keyword", "ventralview")
+        ("side_keyword", "CSV Side keyword (Keywords contained ONLY in the names of the side view files)", "sideview"),
+        ("ventral_keyword", "CSV Ventral keyword (Keywords contained ONLY in the names of the ventral view files)", "ventralview")
     ]
     
     def __init__(self, file_organizer:FileOrganizer, parent: QWidget | None = None) -> None:

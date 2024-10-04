@@ -145,7 +145,7 @@ if __name__ == "__main__":
     app = QApplication([])
 
     # Create a Qt widget, which will be our window.
-    window = MainWindow(window_title="Features Analyzer")
+    window = MainWindow(window_title="KineMatrix - Data Organization Tool")
     window.show()  # IMPORTANT!!!!! Windows are hidden by default.
 
     # Start the event loop.

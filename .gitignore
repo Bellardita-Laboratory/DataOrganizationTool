@@ -5,3 +5,4 @@ DataOrganized/
 build
 DataTool.spec
 dist
+*.spec

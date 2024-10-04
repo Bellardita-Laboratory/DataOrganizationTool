@@ -30,7 +30,6 @@ class Highlighter(QSyntaxHighlighter):
         self._mappings[pattern] = format
 
     def highlightBlock(self, text):
-        print(text)
         for pattern, format in self._mappings.items():
             for match in re.finditer(pattern, text):
                 start, end = match.span()
@@ -120,7 +119,7 @@ Examples:
 
         # Add the mappings
         for keyword in StructureSelectionTab.delimiters_keywords:
-            delimited_keyword = f"\{StructureSelectionTab.delimiter_opener}{keyword}\{StructureSelectionTab.delimiter_closer}"
+            delimited_keyword = f"\\{StructureSelectionTab.delimiter_opener}{keyword}\\{StructureSelectionTab.delimiter_closer}"
             
             kw_format = QTextCharFormat()
             kw_format.setFontItalic(True)

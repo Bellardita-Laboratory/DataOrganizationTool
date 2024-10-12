@@ -66,6 +66,9 @@ class MainWindow(QMainWindow):
         self.output_tab = OutputTab(self.file_organizer)
         self.tabs.addTab(self.output_tab, "Output")
 
+        # Disable all tabs after the data selection tab
+        self._disable_tabs_from(self.data_selection_tab)
+
     def _data_selection_next(self):
         """
             Function called when the user clicks on the next button of the data selection tab

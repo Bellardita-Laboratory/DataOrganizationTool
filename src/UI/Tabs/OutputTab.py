@@ -26,12 +26,6 @@ class OutputTab(TabWidget):
         ("video_folder_name", "Video folder name (Name of the video folder to create)", "Video")
     ]
 
-    # List of boolean value parameters to ask the user (dictionnary key, display parameter name, parameter default value)
-    checkbox_parameters = [
-        ("require_ventral_data", "Don't copy if no corresponding ventral view is found", False),
-        ("require_video_data", "Don't copy if no corresponding video is found", False)
-    ]
-
     def __init__(self, file_organizer:FileOrganizer, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
@@ -58,37 +52,10 @@ class OutputTab(TabWidget):
         # Adds these parameters to the form layout
         add_input_to_form_layout(parameters_form_layout, None, OutputTab.folder_name_parameters, self.output_parameters_dict)
 
-
-        ### Constraints selection
-        constraints_selection_group = QGroupBox("Constraints")
-        constraints_selection_group.setFlat(True)
-        v_layout.addWidget(constraints_selection_group)
-
-        constraints_h_layout = QHBoxLayout()
-        constraints_selection_group.setLayout(constraints_h_layout)
-
-        # Adds these parameters to the form layout
-        for param_key, display_str, default_value in OutputTab.checkbox_parameters:
-            self.output_parameters_dict[param_key] = default_value
-
-            checkbox = QCheckBox(display_str)
-            checkbox.setChecked(default_value)
-            checkbox.stateChanged.connect(
-                lambda state, param_key=param_key: self._checkbox_state_changed((state!=0), param_key)
-            )
-
-            constraints_h_layout.addWidget(checkbox)
-
         ### Organize button
         organize_btn = QPushButton("Organize Files")
         organize_btn.clicked.connect(self._organize_btn_clicked)
         v_layout.addWidget(organize_btn)
-
-    def _checkbox_state_changed(self, state:bool, param_key:str):
-        """
-            Updates the value of the parameter param_key in self.organize_file_parameters_dict when the checkbox state changes
-        """
-        self.output_parameters_dict[param_key] = state
 
     def _organize_btn_clicked(self):
         try:

@@ -11,7 +11,8 @@ from PySide6.QtWidgets import (
     QPushButton,
     QListWidget,
     QTextEdit,
-    QPlainTextEdit
+    QPlainTextEdit,
+    QCheckBox
 )
 
 import regex as re
@@ -39,6 +40,11 @@ class StructureSelectionTab(TabWidget):
     """
         Tab to select the structure parameters
     """
+    # List of boolean value parameters to ask the user (dictionnary key, display parameter name, parameter default value)
+    checkbox_parameters = [
+        ("require_ventral_data", "Don't copy if no corresponding ventral view is found", False),
+        ("require_video_data", "Don't copy if no corresponding video is found", False)
+    ]
 
     structure_str_paramters : tuple[str, str, str] = (
         "structure_str", 
@@ -48,7 +54,7 @@ class StructureSelectionTab(TabWidget):
         "_Mouse(Mouse)_CnF_(Dataset)[_Test]?_(Batch)_[L|l]eft_Run(Run)DLC"
     )
 
-    # Structure parameters
+    # Parameters for the user to make the structure building string
     delimiters_keywords:list[str]=['Batch', 'Dataset', 'Mouse', 'Run']
     delimiter_opener:str='('
     delimiter_closer:str=')'
@@ -60,6 +66,7 @@ class StructureSelectionTab(TabWidget):
         super().__init__(parent)
 
         self.file_organizer = file_organizer
+        self.constraints_dict : dict[str, bool] = dict()
         self.structure_str_parameters_dict : dict[str, str] = dict()
         self.list_widget_dict : dict[str, QListWidget] = dict()
 
@@ -71,6 +78,26 @@ class StructureSelectionTab(TabWidget):
         """
         v_layout = QVBoxLayout()
         self.setLayout(v_layout)
+
+        ### Constraints selection
+        constraints_selection_group = QGroupBox("Constraints")
+        constraints_selection_group.setFlat(True)
+        v_layout.addWidget(constraints_selection_group)
+
+        constraints_h_layout = QHBoxLayout()
+        constraints_selection_group.setLayout(constraints_h_layout)
+
+        # Adds these parameters to the form layout
+        for param_key, display_str, default_value in StructureSelectionTab.checkbox_parameters:
+            self.constraints_dict[param_key] = default_value
+
+            checkbox = QCheckBox(display_str)
+            checkbox.setChecked(default_value)
+            checkbox.stateChanged.connect(
+                lambda state, param_key=param_key: self._checkbox_state_changed((state!=0), param_key)
+            )
+
+            constraints_h_layout.addWidget(checkbox)
 
         ### Delimiters selection
         delimiters_selection_group = QGroupBox("Delimiters")
@@ -107,17 +134,15 @@ Examples:
         self.structure_str_input = QPlainTextEdit(StructureSelectionTab.structure_str_paramters[2])
         self.structure_str_input.setFixedHeight(30)
 
-        # Connect the signal to actualize the input name
-        self._actualize_input_name()
-        self.structure_str_input.textChanged.connect(self._actualize_input_name)
-        self.structure_str_input.textChanged.connect(self.actualize_names)
+        # Connect the signal to actualize the input dict and the names display
+        self.structure_str_input.textChanged.connect(self.refresh_names_display)
         
         delimiters_form_layout.addRow(StructureSelectionTab.structure_str_paramters[1], self.structure_str_input)
 
         # Create the highlighter
         self.highlighter = Highlighter()
 
-        # Add the mappings
+        # Add the mappings for highlighting the delimiters
         for keyword in StructureSelectionTab.delimiters_keywords:
             delimited_keyword = f"\\{StructureSelectionTab.delimiter_opener}{keyword}\\{StructureSelectionTab.delimiter_closer}"
             
@@ -132,7 +157,7 @@ Examples:
         ### Names display
         self.name_display_status = QLabel()
         v_layout.addWidget(self.name_display_status, alignment=Qt.AlignCenter)
-        self._update_name_display("No issue", MessageType.INFORMATION)
+        self._update_status_display("No issue", MessageType.INFORMATION)
 
         h_layout = QHBoxLayout()
         v_layout.addLayout(h_layout)
@@ -153,32 +178,45 @@ Examples:
         next_btn.clicked.connect(self._next_btn_clicked)
         v_layout.addWidget(next_btn)
 
-    def _actualize_input_name(self):
+    def _checkbox_state_changed(self, state:bool, param_key:str):
+        """
+            Updates the value of the parameter param_key in self.constraints_dict when the checkbox state changes
+        """
+        self.constraints_dict[param_key] = state
+        self.refresh_names_display()
+
+    def _actualize_input_dict(self):
         """
             Actualize the input name display
         """
         new_text = self.structure_str_input.toPlainText()
         self.structure_str_parameters_dict[StructureSelectionTab.structure_str_paramters[0]] = new_text
         
-    def actualize_names(self):
+    def refresh_names_display(self):
         """
-            Actualize the UI of the tab
+            Get the names in each list of parameter and actualize the UI of the tab with them
         """
+        # Actualize the structure string
+        self._actualize_input_dict()
+
+        # Set the constraints in the file organizer
+        self.file_organizer.set_constraints(**self.constraints_dict)
+
         # Set the structure parameters in the file organizer
-        self._set_file_organizer_structure()
+        self.file_organizer.set_structure_str_parameters(**self.structure_str_parameters_dict)
 
         # Get the associated names
         try:
             associated_names = self.file_organizer.get_names(StructureSelectionTab.delimiters_keywords, StructureSelectionTab.delimiter_opener, StructureSelectionTab.delimiter_closer)
         except re.error as e:
-            self._update_name_display(f"Error in the regular expression: {e}", MessageType.ERROR)
+            self._update_status_display(f"Error in the regular expression: {e}", MessageType.ERROR)
             return
         else:
-            self._update_name_display("No issue", MessageType.INFORMATION)
+            self._update_status_display("No issue", MessageType.INFORMATION)
         
         self._actualize_names_display(associated_names)
 
-    def _update_name_display(self, message:str, message_type:MessageType):
+    def _update_status_display(self, message:str, message_type:MessageType):
         """
             Display the error message in the name display status
         """
@@ -225,14 +263,7 @@ Examples:
             Function called when the user clicks on the next button
         """
         # Set the structure parameters in the file organizer
-        self._set_file_organizer_structure()
+        self.file_organizer.set_structure_str_parameters(**self.structure_str_parameters_dict)
 
         # Emit the signal to change the tab
         self.change_tab_signal.emit()
-
-    def _set_file_organizer_structure(self):
-        """
-            Set the structure parameters in the file organizer
-        """
-        # Save the structure parameters
-        self.file_organizer.set_structure_str_parameters(**self.structure_str_parameters_dict)

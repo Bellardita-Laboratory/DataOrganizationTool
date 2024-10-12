@@ -86,7 +86,8 @@ class FileOrganizer:
             Get the names of the batch, dataset, mouse and run for each filepath loaded
         """
         # Associate the side views with the corresponding ventral views and video
-        associated_paths_and_names = self._associate_files_from_structure(self.side_csv_filepaths, self.ventral_csv_filepaths, self.video_filepaths, False, False, verbose=False,
+        associated_paths_and_names = self._associate_files_from_structure(self.side_csv_filepaths, self.ventral_csv_filepaths, self.video_filepaths, 
+                                                                          self.require_ventral_data, self.require_video_data, verbose=False,
                                                                           delimiters_keywords=delimiters_keywords, delimiter_opener=delimiter_opener, delimiter_closer=delimiter_closer)
 
         # Get the names of the batch, dataset, mouse and run for each ventral file
@@ -94,12 +95,18 @@ class FileOrganizer:
                             for batch_name, dataset_name, mouse_name, run_name, _, _, _ in associated_paths_and_names]
     
         return associated_names
+    
+    def set_constraints(self, require_ventral_data:bool, require_video_data:bool):
+        """
+            Set the constraints for the organization
+        """
+        self.require_ventral_data = require_ventral_data
+        self.require_video_data = require_video_data
 
     def organize_files(self, side_folder_name:str='sideview', ventral_folder_name:str='ventralview', video_folder_name:str='video',
-                       require_ventral_data:bool=False, require_video_data:bool=False,
                        delimiters_keywords:list[str]=['Batch', 'Dataset', 'Mouse', 'Run'], delimiter_opener:str='(', delimiter_closer:str=')'):
         # Associate the side views with the corresponding ventral views and video
-        associated_paths_and_names = self._associate_files_from_structure(self.side_csv_filepaths, self.ventral_csv_filepaths, self.video_filepaths, require_ventral_data, require_video_data,
+        associated_paths_and_names = self._associate_files_from_structure(self.side_csv_filepaths, self.ventral_csv_filepaths, self.video_filepaths, self.require_ventral_data, self.require_video_data,
                                                                           delimiters_keywords=delimiters_keywords, delimiter_opener=delimiter_opener, delimiter_closer=delimiter_closer)
 
         # Remove the mouse name and run name from the associated names (they are not needed for the folder structure)
@@ -126,8 +133,8 @@ class FileOrganizer:
         return side_csv_filepaths, ventral_csv_filepaths, video_filepaths
 
     def _associate_files_from_structure(self, side_csv_filepaths:list[os.PathLike], ventral_csv_filepaths:list[os.PathLike], video_filepaths:list[os.PathLike],
-                         require_ventral_data:bool, require_video_data:bool, verbose:bool=True,
-                         delimiters_keywords:list[str]=['Batch', 'Dataset', 'Mouse', 'Run'], delimiter_opener:str='(', delimiter_closer:str=')'):
+                            require_ventral_data:bool, require_video_data:bool, verbose:bool=True,
+                            delimiters_keywords:list[str]=['Batch', 'Dataset', 'Mouse', 'Run'], delimiter_opener:str='(', delimiter_closer:str=')'):
         """
             Associate the side views with the corresponding ventral views and video if they exist
         """
@@ -202,7 +209,7 @@ class FileOrganizer:
 
             # Ensure existence of the corresponding files
             if len(ventral_correspondances) == 0:
-                if verbose: print(f"No corresponding ventral view for {side_csv_filepath}")
+                if verbose: print(f"No corresponding ventral view for this data")
 
                 # Skip the file if the ventral view is required
                 if require_ventral_data:
@@ -212,7 +219,7 @@ class FileOrganizer:
                 ventral_correspondances = [None]
 
             if len(video_correspondances) == 0:
-                if verbose: print(f"No corresponding video for {side_csv_filepath}")
+                if verbose: print(f"No corresponding video for this data")
 
                 if require_video_data:
                     if verbose: print(f"Skipping {side_csv_filepath}")
@@ -222,12 +229,12 @@ class FileOrganizer:
 
             # Ensure uniqueness of the corresponding files
             if len(ventral_correspondances) > 1:
-                if verbose: print(f"Multiple ventral views for {side_csv_filepath} : {ventral_correspondances}")
+                if verbose: print(f"Multiple ventral views for this data : {ventral_correspondances}")
                 if verbose: print(f"Choosing the first one : {ventral_correspondances[0]}")
                 ventral_correspondances = [ventral_correspondances[0]]
 
             if len(video_correspondances) > 1:
-                if verbose: print(f"Multiple videos for {side_csv_filepath} : {video_correspondances}")
+                if verbose: print(f"Multiple videos for this data : {video_correspondances}")
 
                 # Get the video with no tracking if it exists
                 no_track_vid = [filepath for filepath in video_correspondances if self.side_keyword not in filepath and self.ventral_keyword not in filepath]

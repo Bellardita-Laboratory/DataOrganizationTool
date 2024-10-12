@@ -8,16 +8,11 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QVBoxLayout,
     QLabel,
-    QCheckBox,
-    QFormLayout,
     QFileDialog,
-    QGroupBox,
-    QMessageBox,
     QTabWidget
     )
 
 from FileOrganizer import FileOrganizer
-from UI.UtilsUI import add_input_to_form_layout, MessageType, show_message
 from UI.Tabs.DataSelectionTab import DataSelectionTab
 from UI.Tabs.StructureSelectionTab import StructureSelectionTab
 from UI.Tabs.OutputTab import OutputTab

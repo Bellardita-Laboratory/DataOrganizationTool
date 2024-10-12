@@ -1,13 +1,9 @@
-import os
 from PySide6.QtWidgets import (
     QWidget,
     QGroupBox,
     QFormLayout,
-    QHBoxLayout,
     QVBoxLayout,
-    QLabel,
-    QPushButton,
-    QCheckBox
+    QPushButton
 )
 
 from UI.Tabs.TabWidget import TabWidget

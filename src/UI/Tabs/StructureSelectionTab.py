@@ -1,4 +1,3 @@
-import os
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QSyntaxHighlighter, QTextCharFormat
 from PySide6.QtWidgets import (
@@ -10,7 +9,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QPushButton,
     QListWidget,
-    QTextEdit,
     QPlainTextEdit,
     QCheckBox
 )
@@ -18,7 +16,7 @@ from PySide6.QtWidgets import (
 import regex as re
 
 from UI.Tabs.TabWidget import TabWidget
-from UI.UtilsUI import get_user_folder_path, add_input_to_form_layout, MessageType
+from UI.UtilsUI import MessageType
 from FileOrganizer import FileOrganizer
 
 class Highlighter(QSyntaxHighlighter):

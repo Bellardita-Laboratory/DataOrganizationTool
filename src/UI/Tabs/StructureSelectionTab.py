@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QCheckBox
 )
 
+import numpy as np
 import regex as re
 
 from UI.Tabs.TabWidget import TabWidget
@@ -227,22 +228,43 @@ Examples:
         elif message_type == MessageType.WARNING:
             self.name_display_status.setStyleSheet("font-weight: bold; color: orange")
 
-    def _actualize_names_display(self, associated_names: list[tuple[str, str, str, str]]):
+    def _actualize_names_display(self, associated_names:np.ndarray[np.ndarray[str]]):
         """
             Actualize the display of the names in the tab
+
+            Args:
+                associated_names: List of tuples containing the associated names (batch, dataset, mouse, run)
         """
-        # Separate the names in different lists
-        batch_names = [batch_name for batch_name, _, _, _ in associated_names]
-        dataset_names = [dataset_name for _, dataset_name, _, _ in associated_names]
-        mouse_names = [mouse_name for _, _, mouse_name, _ in associated_names]
-        run_names = [run_name for _, _, _, run_name in associated_names]
+        # If no element is found, display a warning message
+        if associated_names.size == 0:
+            self._update_status_display("No element found", MessageType.WARNING)
+
+            # Actualize the list widgets with the names
+            self._actualize_list_widget("Batch", [])
+            self._actualize_list_widget("Dataset", [])
+            self._actualize_list_widget("Mouse", [])
+            self._actualize_list_widget("Run", [])
+            return
 
         # Remove duplicates
-        batch_names = list(set(batch_names))
-        dataset_names = list(set(dataset_names))
-        mouse_names = list(set(mouse_names))
-        run_names = list(set(run_names))
+        batch_names = list(set(associated_names[:,0]))
+        dataset_names = list(set(associated_names[:,1]))
+        mouse_names = list(set(associated_names[:,2]))
+        run_names = list(set(associated_names[:,3]))
 
+        # Get the number of associated elements for each name
+        associated_batch_numbers = [np.sum(associated_names[:,0] == batch_name) for batch_name in batch_names]
+        associated_dataset_numbers = [np.sum(associated_names[:,1] == dataset_name) for dataset_name in dataset_names]
+        associated_mouse_numbers = [np.sum(associated_names[:,2] == mouse_name) for mouse_name in mouse_names]
+        associated_run_numbers = [np.sum(associated_names[:,3] == run_name) for run_name in run_names]
+
+        # Add the number of associated elements to the names
+        batch_names = [f"{batch_name} ({associated_number} elements)" for batch_name, associated_number in zip(batch_names, associated_batch_numbers)]
+        dataset_names = [f"{dataset_name} ({associated_number} elements)" for dataset_name, associated_number in zip(dataset_names, associated_dataset_numbers)]
+        mouse_names = [f"{mouse_name} ({associated_number} elements)" for mouse_name, associated_number in zip(mouse_names, associated_mouse_numbers)]
+        run_names = [f"{run_name} ({associated_number} elements)" for run_name, associated_number in zip(run_names, associated_run_numbers)]
+
+        # Actualize the list widgets with the names
         self._actualize_list_widget("Batch", batch_names)
         self._actualize_list_widget("Dataset", dataset_names)
         self._actualize_list_widget("Mouse", mouse_names)

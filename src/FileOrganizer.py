@@ -4,6 +4,7 @@ import shutil
 
 from tqdm import tqdm
 import regex as re
+import numpy as np
 
 def capture_variables_from_file(filepath:os.PathLike, structure_str:str, 
         delimiters_keywords:list[str]=['Batch', 'Dataset', 'Mouse', 'Run'], delimiter_opener:str='(', delimiter_closer:str=')'):
@@ -83,6 +84,8 @@ class FileOrganizer:
     def get_names(self, delimiters_keywords:list[str]=['Batch', 'Dataset', 'Mouse', 'Run'], delimiter_opener:str='(', delimiter_closer:str=')'):
         """
             Get the names of the batch, dataset, mouse and run for each filepath loaded
+
+            Returns an array of shape (n_files, 4) with the names of the batch, dataset, mouse and run for each file
         """
         # Associate the side views with the corresponding ventral views and video
         associated_paths_and_names = self._associate_files_from_structure(self.side_csv_filepaths, self.ventral_csv_filepaths, self.video_filepaths, 
@@ -90,8 +93,8 @@ class FileOrganizer:
                                                                           delimiters_keywords=delimiters_keywords, delimiter_opener=delimiter_opener, delimiter_closer=delimiter_closer)
 
         # Get the names of the batch, dataset, mouse and run for each ventral file
-        associated_names = [(batch_name, dataset_name, mouse_name, run_name) 
-                            for batch_name, dataset_name, mouse_name, run_name, _, _, _ in associated_paths_and_names]
+        associated_names = np.array([(batch_name, dataset_name, mouse_name, run_name) 
+                            for batch_name, dataset_name, mouse_name, run_name, _, _, _ in associated_paths_and_names])
     
         return associated_names
     

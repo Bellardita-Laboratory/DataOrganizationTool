@@ -25,15 +25,25 @@ class Highlighter(QSyntaxHighlighter):
         QSyntaxHighlighter.__init__(self, parent)
 
         self._mappings = {}
+        self._subformats = {}
+
+    def add_subformat(self, name, format):
+        self._subformats[name] = format
 
     def add_mapping(self, pattern, format):
         self._mappings[pattern] = format
 
     def highlightBlock(self, text):
         for pattern, format in self._mappings.items():
-            for match in re.finditer(pattern, text):
-                start, end = match.span()
+            for _match in re.finditer(pattern, text):
+                start, end = _match.span()
                 self.setFormat(start, end - start, format)
+
+                nested_groups = _match.capturesdict()
+                for group_name in nested_groups:
+                    if group_name in self._subformats:
+                        group_start, group_end = _match.span(group_name)
+                        self.setFormat(group_start, group_end - group_start, self._subformats[group_name])
 
 class StructureSelectionTab(TabWidget):
     """

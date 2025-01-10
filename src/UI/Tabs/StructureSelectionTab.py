@@ -47,9 +47,9 @@ class StructureSelectionTab(TabWidget):
 
     structure_str_paramters : tuple[str, str, str] = (
         "structure_str", 
-        """Structure of the file names: use '(' and ')' to capture a group
-    A group can be Batch, Dataset, Mouse or Run
-         eg: (Batch)_(Dataset)_(Mouse)_(Run)""", 
+        """Structure of the file names: use '(' and ')' to capture a group (A group can be Batch, Dataset, Mouse or Run)
+The structure of the captured group can be specified with ':'
+eg: To capture a batch name that doesn't contain '_' : (Batch:[^_]*)_(Dataset)_(Mouse)_(Run)""",
         "_Mouse(Mouse)_CnF_(Dataset)[_Test]?_(Batch)_[L|l]eft_Run(Run)DLC"
     )
 
@@ -127,12 +127,14 @@ Examples:
         delimiters_description.setWordWrap(True)
         delimiter_v_layout.addWidget(delimiters_description)
 
-        delimiters_form_layout = QFormLayout()
-        delimiter_v_layout.addLayout(delimiters_form_layout)
-
         # Create the input for the structure string
+        structure_str_instructions = QLabel(StructureSelectionTab.structure_str_paramters[1])
+        structure_str_instructions.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        delimiter_v_layout.addWidget(structure_str_instructions)
+
         self.structure_str_input = QPlainTextEdit(StructureSelectionTab.structure_str_paramters[2])
         self.structure_str_input.setFixedHeight(30)
+        delimiter_v_layout.addWidget(self.structure_str_input)
 
         # Connect the signal to actualize the input dict and the names display
         self.structure_str_input.textChanged.connect(self.refresh_names_display)

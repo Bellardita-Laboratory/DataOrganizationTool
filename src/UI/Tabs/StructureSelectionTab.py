@@ -57,6 +57,7 @@ class StructureSelectionTab(TabWidget):
     delimiters_keywords:list[str]=['Batch', 'Dataset', 'Mouse', 'Run']
     delimiter_opener:str='('
     delimiter_closer:str=')'
+    delimiter_structure_start:str=':'
 
     # List of parameters names to display in the list widget
     name_list_parameters : list[str] = ["Batch", "Dataset", "Mouse", "Run"]
@@ -206,7 +207,9 @@ Examples:
 
         # Get the associated names
         try:
-            associated_names = self.file_organizer.get_names(StructureSelectionTab.delimiters_keywords, StructureSelectionTab.delimiter_opener, StructureSelectionTab.delimiter_closer)
+            associated_names = self.file_organizer.get_names(StructureSelectionTab.delimiters_keywords, 
+                                                             StructureSelectionTab.delimiter_opener, StructureSelectionTab.delimiter_closer,
+                                                             StructureSelectionTab.delimiter_structure_start)
         except re.error as e:
             self._update_status_display(f"Error in the regular expression: {e}", MessageType.ERROR)
             return

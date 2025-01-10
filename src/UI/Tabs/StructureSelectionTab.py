@@ -148,23 +148,32 @@ Examples:
 
         # Connect the signal to actualize the input dict and the names display
         self.structure_str_input.textChanged.connect(self.refresh_names_display)
-        
-        delimiters_form_layout.addRow(StructureSelectionTab.structure_str_paramters[1], self.structure_str_input)
 
+        ### Highlighter
         # Create the highlighter
         self.highlighter = Highlighter()
 
+        # Create the subgroups text format for the highlighter
+        sub_format = QTextCharFormat()
+        sub_format.setFontItalic(True)
+        sub_format.setForeground(Qt.darkGreen)
+
+        # Add the format of the subgroups to the highlighter
+        self.highlighter.add_subformat("sub_format", sub_format)
+
+        # Create the keyword text format for the highlighter
+        kw_format = QTextCharFormat()
+        kw_format.setFontItalic(True)
+        kw_format.setForeground(Qt.red)
+
         # Add the mappings for highlighting the delimiters
         for keyword in StructureSelectionTab.delimiters_keywords:
-            delimited_keyword = f"\\{StructureSelectionTab.delimiter_opener}{keyword}\\{StructureSelectionTab.delimiter_closer}"
-            
-            kw_format = QTextCharFormat()
-            kw_format.setFontItalic(True)
-            kw_format.setForeground(Qt.red)
-            self.highlighter.add_mapping(delimited_keyword, kw_format)
+            # Add the mapping for the keyword
+            #   The regex pattern is used to match any character and an even number of parentheses ((?R) is used to match the outer pattern itself (recursive), ie an open and closed parenthesis with any character in between)
+            structured_delimited_keyword = f"\\{StructureSelectionTab.delimiter_opener}{keyword}(?P<sub_format>{StructureSelectionTab.delimiter_structure_start}[^)(]*(?P<rs>\\((?:[^)(]+|(?P>rs))*\\))?[^)()]*)?\\{StructureSelectionTab.delimiter_closer}"
+            self.highlighter.add_mapping(structured_delimited_keyword, kw_format)
 
         self.highlighter.setDocument(self.structure_str_input.document())
-
 
         ### Names display
         self.name_display_status = QLabel()

@@ -7,7 +7,8 @@ import regex as re
 import numpy as np
 
 def capture_variables_from_file(filepath:os.PathLike, structure_str:str, 
-        delimiters_keywords:list[str]=['Batch', 'Dataset', 'Mouse', 'Run'], delimiter_opener:str='(', delimiter_closer:str=')'):
+        delimiters_keywords:list[str]=['Batch', 'Dataset', 'Mouse', 'Run'], delimiter_opener:str='(', delimiter_closer:str=')',
+        delimiter_structure_start:str=':'):
     """
         Get the filename, returns 
             - True if the structure matches the file name, False otherwise
@@ -26,6 +27,15 @@ def capture_variables_from_file(filepath:os.PathLike, structure_str:str,
     for keyword in delimiters_keywords:
         delimited_keyword = f'{delimiter_opener}{keyword}{delimiter_closer}'
         regexp = regexp.replace(delimited_keyword, f'(?P<{keyword}>.*)', 1)
+
+        structured_delimited_keyword = f'(?P<found_pattern>\\{delimiter_opener}{keyword}{delimiter_structure_start}(?P<matched_struct>[^{delimiter_closer}]*)\\{delimiter_closer})'
+
+        struct_match = re.search(structured_delimited_keyword, regexp)
+        if struct_match is not None:
+            required_struct = struct_match.group("matched_struct")
+            found_pattern = struct_match.group("found_pattern")
+
+            regexp = regexp.replace(found_pattern, f'(?P<{keyword}>{required_struct})', 1)
 
     name_match = re.search(regexp, data_name)
     

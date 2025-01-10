@@ -60,7 +60,7 @@ class StructureSelectionTab(TabWidget):
         """Structure of the file names: use '(' and ')' to capture a group (A group can be Batch, Dataset, Mouse or Run)
 The structure of the captured group can be specified with ':'
 eg: To capture a batch name that doesn't contain '_' : (Batch:[^_]*)_(Dataset)_(Mouse)_(Run)""",
-        "_Mouse(Mouse)_CnF_(Dataset)[_Test]?_(Batch)_[L|l]eft_Run(Run)DLC"
+        "Dual_side_and_ventral_(Mouse)_Post_(Dataset:(WT|MU_C(x|X)|MU_Saline|.*))_(Batch)_Run(Run:[0-9])"#"_Mouse(Mouse)_CnF_(Dataset)[_Test]?_(Batch)_[L|l]eft_Run(Run)DLC"
     )
 
     # Parameters for the user to make the structure building string

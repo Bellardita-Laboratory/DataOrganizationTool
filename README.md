@@ -38,7 +38,7 @@ Target folder
         ...
 ```
 
-### Packaging into an executable
+## Packaging into an executable
 
 To 'build' the project (ie package into a frozen executable), pyinstaller can be used.
 

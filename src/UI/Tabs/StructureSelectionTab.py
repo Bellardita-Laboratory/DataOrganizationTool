@@ -264,35 +264,22 @@ Examples:
             self._update_status_display("No element found", MessageType.WARNING)
 
             # Actualize the list widgets with the names
-            self._actualize_list_widget("Batch", [])
-            self._actualize_list_widget("Dataset", [])
-            self._actualize_list_widget("Mouse", [])
-            self._actualize_list_widget("Run", [])
+            for name in StructureSelectionTab.name_list_parameters:
+                self._actualize_list_widget(name, [])
             return
+        
+        for i, name in enumerate(StructureSelectionTab.name_list_parameters):
+            # Remove duplicates
+            names = list(set(associated_names[:,i]))
 
-        # Remove duplicates
-        batch_names = list(set(associated_names[:,0]))
-        dataset_names = list(set(associated_names[:,1]))
-        mouse_names = list(set(associated_names[:,2]))
-        run_names = list(set(associated_names[:,3]))
-
-        # Get the number of associated elements for each name
-        associated_batch_numbers = [np.sum(associated_names[:,0] == batch_name) for batch_name in batch_names]
-        associated_dataset_numbers = [np.sum(associated_names[:,1] == dataset_name) for dataset_name in dataset_names]
-        associated_mouse_numbers = [np.sum(associated_names[:,2] == mouse_name) for mouse_name in mouse_names]
-        associated_run_numbers = [np.sum(associated_names[:,3] == run_name) for run_name in run_names]
-
-        # Add the number of associated elements to the names
-        batch_names = [f"{batch_name} ({associated_number} elements)" for batch_name, associated_number in zip(batch_names, associated_batch_numbers)]
-        dataset_names = [f"{dataset_name} ({associated_number} elements)" for dataset_name, associated_number in zip(dataset_names, associated_dataset_numbers)]
-        mouse_names = [f"{mouse_name} ({associated_number} elements)" for mouse_name, associated_number in zip(mouse_names, associated_mouse_numbers)]
-        run_names = [f"{run_name} ({associated_number} elements)" for run_name, associated_number in zip(run_names, associated_run_numbers)]
-
-        # Actualize the list widgets with the names
-        self._actualize_list_widget("Batch", batch_names)
-        self._actualize_list_widget("Dataset", dataset_names)
-        self._actualize_list_widget("Mouse", mouse_names)
-        self._actualize_list_widget("Run", run_names)
+            # Get the number of associated elements for each name
+            associated_numbers = [np.sum(associated_names[:,i] == name) for name in names]
+            
+            # Add the number of associated elements to the names
+            file_names = [f"{name} ({associated_number} elements)" for name, associated_number in zip(names, associated_numbers)]
+            
+            # Actualize the list widgets with the names
+            self._actualize_list_widget(name, file_names)
 
     def _actualize_list_widget(self, name:str, names_list:list[str]):
         """

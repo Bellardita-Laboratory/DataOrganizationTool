@@ -167,17 +167,12 @@ class FileOrganizer:
             # If the structure doesn't match the file
             if not match_found:
                 if verbose: print(f"Structure does not match the file {ventral_csv_filepath}")
-                batch_name = file_name
-                dataset_name = file_name
-                mouse_name = file_name
-                run_name = file_name
+                captured_ventral_tuple = tuple(file_name for key in delimiters_keywords)
             else:
-                batch_name = captured_ventral_dict['Batch']
-                dataset_name = captured_ventral_dict['Dataset']
-                mouse_name = captured_ventral_dict['Mouse']
-                run_name = captured_ventral_dict['Run']
+                # Tuple containing batch, dataset, mouse and run names
+                captured_ventral_tuple = tuple(captured_ventral_dict[key] for key in delimiters_keywords)
 
-            ventral_csv_data.append((batch_name, dataset_name, mouse_name, run_name))
+            ventral_csv_data.append(captured_ventral_tuple)
 
         # Get the names of the batch, dataset and mouse for each video file
         video_data : list[tuple[str,str,str,str]] = []
@@ -188,17 +183,12 @@ class FileOrganizer:
             # If the structure doesn't match the file
             if not match_found:
                 if verbose: print(f"Structure does not match the file {video_filepath}")
-                batch_name = file_name
-                dataset_name = file_name
-                mouse_name = file_name
-                run_name = file_name
+                captured_video_tuple = tuple(file_name for key in delimiters_keywords)
             else:
-                batch_name = captured_video_dict['Batch']
-                dataset_name = captured_video_dict['Dataset']
-                mouse_name = captured_video_dict['Mouse']
-                run_name = captured_video_dict['Run']
+                # Tuple containing batch, dataset, mouse and run names
+                captured_video_tuple = tuple(captured_video_dict[key] for key in delimiters_keywords)
 
-            video_data.append((batch_name, dataset_name, mouse_name, run_name))
+            video_data.append(captured_video_tuple)
 
 
         associated_paths : list[tuple[str,str,str,str, os.PathLike,os.PathLike|None,os.PathLike|None]] = []
@@ -208,24 +198,19 @@ class FileOrganizer:
 
             if not match_found:
                 if verbose: print(f"Structure does not match the file {side_csv_filepath}")
-                batch_name = file_name
-                dataset_name = file_name
-                mouse_name = file_name
-                run_name = file_name
+                captured_side_tuple = tuple(file_name for key in delimiters_keywords)
             else:
-                batch_name = captured_side_dict['Batch']
-                dataset_name = captured_side_dict['Dataset']
-                mouse_name = captured_side_dict['Mouse']
-                run_name = captured_side_dict['Run']
+                # Tuple containing batch, dataset, mouse and run names
+                captured_side_tuple = tuple(captured_side_dict[key] for key in delimiters_keywords)
 
             # Get the corresponding video file
             ventral_correspondances = [ventral_csv_filepaths[i] for i in range(len(ventral_csv_filepaths)) 
-                                    if (batch_name, dataset_name, mouse_name, run_name) == ventral_csv_data[i]]
+                                    if captured_side_tuple == ventral_csv_data[i]]
             
             video_correspondances = [video_filepaths[i] for i in range(len(video_filepaths)) 
-                                    if (batch_name, dataset_name, mouse_name, run_name) == video_data[i]]
+                                    if captured_side_tuple == video_data[i]]
 
-            if verbose: print(batch_name, dataset_name, mouse_name, run_name)
+            if verbose: print(captured_side_tuple)
 
             # Ensure existence of the corresponding files
             if len(ventral_correspondances) == 0:
@@ -271,6 +256,7 @@ class FileOrganizer:
             video_filepath = video_correspondances[0]
 
             # Add the corresponding filepaths to the list
+            batch_name, dataset_name, mouse_name, run_name = captured_side_tuple
             associated_paths.append((batch_name, dataset_name, mouse_name, run_name, side_csv_filepath, ventral_csv_filepath, video_filepath))
 
         return associated_paths

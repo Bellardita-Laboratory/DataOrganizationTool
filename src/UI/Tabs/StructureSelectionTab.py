@@ -25,15 +25,25 @@ class Highlighter(QSyntaxHighlighter):
         QSyntaxHighlighter.__init__(self, parent)
 
         self._mappings = {}
+        self._subformats = {}
+
+    def add_subformat(self, name, format):
+        self._subformats[name] = format
 
     def add_mapping(self, pattern, format):
         self._mappings[pattern] = format
 
     def highlightBlock(self, text):
         for pattern, format in self._mappings.items():
-            for match in re.finditer(pattern, text):
-                start, end = match.span()
+            for _match in re.finditer(pattern, text):
+                start, end = _match.span()
                 self.setFormat(start, end - start, format)
+
+                nested_groups = _match.capturesdict()
+                for group_name in nested_groups:
+                    if group_name in self._subformats:
+                        group_start, group_end = _match.span(group_name)
+                        self.setFormat(group_start, group_end - group_start, self._subformats[group_name])
 
 class StructureSelectionTab(TabWidget):
     """
@@ -47,16 +57,17 @@ class StructureSelectionTab(TabWidget):
 
     structure_str_paramters : tuple[str, str, str] = (
         "structure_str", 
-        """Structure of the file names: use '(' and ')' to capture a group
-    A group can be Batch, Dataset, Mouse or Run
-         eg: (Batch)_(Dataset)_(Mouse)_(Run)""", 
-        "_Mouse(Mouse)_CnF_(Dataset)[_Test]?_(Batch)_[L|l]eft_Run(Run)DLC"
+        """Structure of the file names: use '(' and ')' to capture a group (A group can be Batch, Dataset, Mouse or Run)
+The structure of the captured group can be specified with ':'
+eg: To capture a batch name that doesn't contain '_' : (Batch:[^_]*)_(Dataset)_(Mouse)_(Run)""",
+        "Dual_side_and_ventral_(Mouse)_Post_(Dataset:(WT|MU_C(x|X)|MU_Saline|.*))_(Batch)_Run(Run:[0-9])"#"_Mouse(Mouse)_CnF_(Dataset)[_Test]?_(Batch)_[L|l]eft_Run(Run)DLC"
     )
 
     # Parameters for the user to make the structure building string
     delimiters_keywords:list[str]=['Batch', 'Dataset', 'Mouse', 'Run']
     delimiter_opener:str='('
     delimiter_closer:str=')'
+    delimiter_structure_start:str=':'
 
     # List of parameters names to display in the list widget
     name_list_parameters : list[str] = ["Batch", "Dataset", "Mouse", "Run"]
@@ -126,32 +137,43 @@ Examples:
         delimiters_description.setWordWrap(True)
         delimiter_v_layout.addWidget(delimiters_description)
 
-        delimiters_form_layout = QFormLayout()
-        delimiter_v_layout.addLayout(delimiters_form_layout)
-
         # Create the input for the structure string
+        structure_str_instructions = QLabel(StructureSelectionTab.structure_str_paramters[1])
+        structure_str_instructions.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        delimiter_v_layout.addWidget(structure_str_instructions)
+
         self.structure_str_input = QPlainTextEdit(StructureSelectionTab.structure_str_paramters[2])
         self.structure_str_input.setFixedHeight(30)
+        delimiter_v_layout.addWidget(self.structure_str_input)
 
         # Connect the signal to actualize the input dict and the names display
         self.structure_str_input.textChanged.connect(self.refresh_names_display)
-        
-        delimiters_form_layout.addRow(StructureSelectionTab.structure_str_paramters[1], self.structure_str_input)
 
+        ### Highlighter
         # Create the highlighter
         self.highlighter = Highlighter()
 
+        # Create the subgroups text format for the highlighter
+        sub_format = QTextCharFormat()
+        sub_format.setFontItalic(True)
+        sub_format.setForeground(Qt.darkGreen)
+
+        # Add the format of the subgroups to the highlighter
+        self.highlighter.add_subformat("sub_format", sub_format)
+
+        # Create the keyword text format for the highlighter
+        kw_format = QTextCharFormat()
+        kw_format.setFontItalic(True)
+        kw_format.setForeground(Qt.red)
+
         # Add the mappings for highlighting the delimiters
         for keyword in StructureSelectionTab.delimiters_keywords:
-            delimited_keyword = f"\\{StructureSelectionTab.delimiter_opener}{keyword}\\{StructureSelectionTab.delimiter_closer}"
-            
-            kw_format = QTextCharFormat()
-            kw_format.setFontItalic(True)
-            kw_format.setForeground(Qt.red)
-            self.highlighter.add_mapping(delimited_keyword, kw_format)
+            # Add the mapping for the keyword
+            #   The regex pattern is used to match any character and an even number of parentheses ((?R) is used to match the outer pattern itself (recursive), ie an open and closed parenthesis with any character in between)
+            structured_delimited_keyword = f"\\{StructureSelectionTab.delimiter_opener}{keyword}(?P<sub_format>{StructureSelectionTab.delimiter_structure_start}[^)(]*(?P<rs>\\((?:[^)(]+|(?P>rs))*\\))?[^)()]*)?\\{StructureSelectionTab.delimiter_closer}"
+            self.highlighter.add_mapping(structured_delimited_keyword, kw_format)
 
         self.highlighter.setDocument(self.structure_str_input.document())
-
 
         ### Names display
         self.name_display_status = QLabel()
@@ -206,7 +228,9 @@ Examples:
 
         # Get the associated names
         try:
-            associated_names = self.file_organizer.get_names(StructureSelectionTab.delimiters_keywords, StructureSelectionTab.delimiter_opener, StructureSelectionTab.delimiter_closer)
+            associated_names = self.file_organizer.get_names(StructureSelectionTab.delimiters_keywords, 
+                                                             StructureSelectionTab.delimiter_opener, StructureSelectionTab.delimiter_closer,
+                                                             StructureSelectionTab.delimiter_structure_start)
         except re.error as e:
             self._update_status_display(f"Error in the regular expression: {e}", MessageType.ERROR)
             return

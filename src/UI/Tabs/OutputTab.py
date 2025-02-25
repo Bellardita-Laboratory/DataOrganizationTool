@@ -56,7 +56,10 @@ class OutputTab(TabWidget):
     def _organize_btn_clicked(self):
         try:
             self.file_organizer.organize_files(**self.output_parameters_dict,
-                                               delimiters_keywords=StructureSelectionTab.delimiters_keywords, delimiter_opener=StructureSelectionTab.delimiter_opener, delimiter_closer=StructureSelectionTab.delimiter_closer)
+                                               delimiters_keywords=StructureSelectionTab.delimiters_keywords, 
+                                               delimiter_opener=StructureSelectionTab.delimiter_opener, 
+                                               delimiter_closer=StructureSelectionTab.delimiter_closer,
+                                               delimiter_structure_start=StructureSelectionTab.delimiter_structure_start)
         except Exception as e:
             show_message(str(e), MessageType.ERROR)
             raise e

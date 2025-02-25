@@ -37,3 +37,16 @@ Target folder
     |- Batch 2
         ...
 ```
+
+### Packaging into an executable
+
+To 'build' the project (ie package into a frozen executable), pyinstaller can be used.
+
+A virtual environment with all the libraries and dependencies has to be created (.venv folder). See [How to run](#how-to-run) for dependencies installation.
+
+Then, the following commands creates the executable in the "dist" folder. 
+
+**Windows**
+`
+pyinstaller.exe -c --onefile --icon="./src/Resources/Images/Logo.ico" --paths .\.venv\Lib\site-packages\ -n Kinematrix-DataOrganizationTool .\src\Window.py
+`

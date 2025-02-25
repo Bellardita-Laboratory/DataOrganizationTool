@@ -16,8 +16,8 @@ After installing the required libraries (via ```pip install -r requirements.txt`
 
 ```bash
 Target folder
-    |- Batch 1
-    |    |----- Dataset 1
+    |- Group 1
+    |    |----- Timepoint 1
     |    |        |--------- Side view
     |    |        |            |---Mouse 1 run 1 (.csv)
     |    |        |            |---Mouse 1 run 2 (.csv)
@@ -31,10 +31,10 @@ Target folder
     |    |                    |---Mouse 1 run 2 (.csv)
     |    |                    ...
     |    |
-    |    |----- Dataset 2
+    |    |----- Timepoint 2
     |            ...
     |            
-    |- Batch 2
+    |- Group 2
         ...
 ```
 

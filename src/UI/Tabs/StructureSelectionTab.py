@@ -57,20 +57,37 @@ class StructureSelectionTab(TabWidget):
 
     structure_str_paramters : tuple[str, str, str] = (
         "structure_str", 
-        """Structure of the file names: use '(' and ')' to capture a group (A group can be Batch, Dataset, Mouse or Run)
+        """Structure of the file names: use '(' and ')' to capture a group (A group can be Group, Timepoint, Mouse or Run)
 The structure of the captured group can be specified with ':'
-eg: To capture a batch name that doesn't contain '_' : (Batch:[^_]*)_(Dataset)_(Mouse)_(Run)""",
-        "Dual_side_and_ventral_(Mouse)_Post_(Dataset:(WT|MU_C(x|X)|MU_Saline|.*))_(Batch)_Run(Run:[0-9])"#"_Mouse(Mouse)_CnF_(Dataset)[_Test]?_(Batch)_[L|l]eft_Run(Run)DLC"
+eg: To capture a group name that doesn't contain '_' : (Group:[^_]*)_(Timepoint)_(Mouse)_(Run)""",
+        "Dual_side_and_ventral_(Mouse)_Post_(Timepoint:(WT|MU_C(x|X)|MU_Saline|.*))_(Group)_Run(Run:[0-9])"
     )
 
+    delimiter_description = """Structure supports regular expressions. 
+                                        - Use '.' for any character
+                                        - Use '*' for repeating the previous character 0 or more times
+                                        - Use '+' for repeating the previous character 1 or more times
+                                        - Use '?' for repeating the previous character 0 or 1 time
+                                        - Use '[' and ']' for specifying a set of characters (eg [0-9] for any digit)
+                                        - Use '^' for negating a set of characters (eg [^0-9] for any character that is not a digit)
+                                        - Use '\\' to escape special characters
+                                        - Use '|' for or (eg 'a|b' for 'a' or 'b')
+                                        - Use '^' at the start to specify the start of the string
+                                        - Use '$' at the end to specify the end of the string
+
+Examples:
+    - If the file name is 'Group1_Timepoint3_Mouse245_Run78', we can use 'Group(Group)_Timepoint(Timepoint)_Mouse(Mouse)_Run(Run)'
+        It will find '1' for the group name, '3' for the timepoint name, '245' for the mouse name and '78' for the run name
+                                        """
+
     # Parameters for the user to make the structure building string
-    delimiters_keywords:list[str]=['Batch', 'Dataset', 'Mouse', 'Run']
+    delimiters_keywords:list[str]=['Group', 'Timepoint', 'Mouse', 'Run']
     delimiter_opener:str='('
     delimiter_closer:str=')'
     delimiter_structure_start:str=':'
 
     # List of parameters names to display in the list widget
-    name_list_parameters : list[str] = ["Batch", "Dataset", "Mouse", "Run"]
+    name_list_parameters : list[str] = ["Group", "Timepoint", "Mouse", "Run"]
 
     def __init__(self, file_organizer:FileOrganizer, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -117,23 +134,7 @@ eg: To capture a batch name that doesn't contain '_' : (Batch:[^_]*)_(Dataset)_(
         delimiter_v_layout = QVBoxLayout()
         delimiters_selection_group.setLayout(delimiter_v_layout)
 
-        delimiters_description = QLabel("""Structure supports regular expressions. 
-                                        - Use '.' for any character
-                                        - Use '*' for repeating the previous character 0 or more times
-                                        - Use '+' for repeating the previous character 1 or more times
-                                        - Use '?' for repeating the previous character 0 or 1 time
-                                        - Use '[' and ']' for specifying a set of characters (eg [0-9] for any digit)
-                                        - Use '^' for negating a set of characters (eg [^0-9] for any character that is not a digit)
-                                        - Use '\\' to escape special characters
-                                        - Use '|' for or (eg 'a|b' for 'a' or 'b')
-                                        - Use '^' at the start to specify the start of the string
-                                        - Use '$' at the end to specify the end of the string
-
-Examples:
-    - If the file name is 'Batch1_Dataset3_Mouse245_Run78', we can use 'Batch(Batch)_Dataset(Dataset)_Mouse(Mouse)_Run(Run)'
-        It will find '1' for the batch name, '3' for the dataset name, '245' for the mouse name and '78' for the run name
-                                        """
-        )
+        delimiters_description = QLabel(StructureSelectionTab.delimiter_description)
         delimiters_description.setWordWrap(True)
         delimiter_v_layout.addWidget(delimiters_description)
 

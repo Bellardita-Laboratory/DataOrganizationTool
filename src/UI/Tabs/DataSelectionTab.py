@@ -19,8 +19,8 @@ class DataSelectionTab(TabWidget):
     """
     # List of folder selection parameters to ask the user (dictionnary key, display parameter name, parameter default value)
     folder_selection_parameters : list[tuple[str, str, os.PathLike]] = [
-        ("data_folder_path", "Data folder", r"C:\Users\walid\Desktop\Work\Thesis"),#os.path.abspath('.')),
-        ("target_folder_path", "Target folder", r"C:\Users\walid\Desktop\Work\Thesis-Organized")#os.path.abspath('.'))
+        ("data_folder_path", "Data folder", os.path.abspath('./Data')),
+        ("target_folder_path", "Target folder",os.path.abspath('./Output'))
     ]
 
     # List of extension parameters to ask the user (dictionnary key, display parameter name, parameter default value)
@@ -31,8 +31,8 @@ class DataSelectionTab(TabWidget):
 
     # List of keywords parameters to ask the user (dictionnary key, display parameter name, parameter default value)
     keyword_parameters : list[tuple[str, str, str]] = [
-        ("side_keyword", "CSV Side keyword (Keywords contained ONLY in the names of the side view files)", "Sideview"),
-        ("ventral_keyword", "CSV Ventral keyword (Keywords contained ONLY in the names of the ventral view files)", "Ventralview")
+        ("side_keyword", "CSV Side keyword (Keywords contained ONLY in the names of the side view files)", "sideview"),
+        ("ventral_keyword", "CSV Ventral keyword (Keywords contained ONLY in the names of the ventral view files)", "ventralview")
     ]
     
     def __init__(self, file_organizer:FileOrganizer, parent: QWidget | None = None) -> None:

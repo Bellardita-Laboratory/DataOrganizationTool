@@ -1,7 +1,7 @@
 # Data Organization Tool
 
 ## Description
-Tool for the [MouseFeatureExtraction project](https://github.com/SimpingOjou/MouseFeatureExtraction), used to organize the data into the required arborescence.
+Tool for the [Kinematrix project](https://github.com/Bellardita-Laboratory/KineMatrix), used to organize the data into the required arborescence.
 
 ## How to run
 After installing the required libraries (via ```pip install -r requirements.txt```), launch the `Window.py` file.

@@ -67,7 +67,7 @@ class FileOrganizer:
         self.video_filepaths = None
 
 
-    def set_and_load_data_parameters(self,side_keyword:str, ventral_keyword:str,
+    def set_and_load_data_parameters(self, side_keyword:str, ventral_keyword:str,
                                     data_folder_path:os.PathLike, target_folder_path:os.PathLike,
                                     csv_extension:str, video_extension:str):
         """
@@ -84,6 +84,18 @@ class FileOrganizer:
         # Load the filepaths to all the files in the corresponding folder
         self.side_csv_filepaths, self.ventral_csv_filepaths, self.video_filepaths = self._get_filepaths(self.data_folder_path, self.csv_extension, self.video_extension)
 
+    def get_all_filenames(self):
+        """
+            Get the names of all the files in the folder
+        """
+        side_names : list[str] = [os.path.splitext(os.path.basename(file))[0] for file in self.side_csv_filepaths]
+        ventral_names : list[str] = [os.path.splitext(os.path.basename(file))[0] for file in self.ventral_csv_filepaths]
+        video_names : list[str] = [os.path.splitext(os.path.basename(file))[0] for file in self.video_filepaths]
+
+        all_names = side_names + ventral_names + video_names
+        all_names = list(set(all_names))
+
+        return all_names
 
     def set_structure_str_parameters(self, structure_str:str):
         """

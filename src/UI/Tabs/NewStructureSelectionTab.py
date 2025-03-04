@@ -209,6 +209,7 @@ class StructureSelectionTab(TabWidget):
     ]
 
     default_separator:str='_'
+    separators_separator:str=','
 
     # Parameters for the user to make the structure building string
     delimiters_keywords:list[str]=['Group', 'Timepoint', 'Mouse', 'Run']
@@ -310,8 +311,12 @@ class StructureSelectionTab(TabWidget):
             Function called when the user changes the separator text
         """
         separator = self.separator_edit.text()
-        self.structure_selector.set_separator(separator)
-        self.refresh_names_display()
+        try:
+            self.structure_selector.set_separator(separator)
+            self.refresh_names_display()
+        except Exception as e:
+            self._update_status_display(f"Error: {e}", MessageType.ERROR)
+            print("Error: ", e)
 
     def setup_widget(self):
         """

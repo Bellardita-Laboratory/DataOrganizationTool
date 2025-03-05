@@ -120,7 +120,10 @@ class StructureFinder:
         
         # Remove potential duplicates
         possible_structure_values = [set(comp) for comp in self._structure_data]
-        self._sorted_possible_structure_values = [sorted(comp, reverse=True) for comp in possible_structure_values]
+
+        # Save the found configurations in decreasing order of length (useful for regex)
+        self._sorted_possible_structure_values = [sorted(comp, key=len, reverse=True) for comp in possible_structure_values]
+
         return possible_structure_values
     
     def get_structure_str(self, batch_pos:int|None, dataset_pos:int|None, mouse_pos:int|None, run_pos:int|None,

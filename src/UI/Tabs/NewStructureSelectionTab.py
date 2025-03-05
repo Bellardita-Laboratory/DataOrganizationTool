@@ -24,7 +24,7 @@ from UI.UtilsUI import MessageType
 from FileOrganizer import FileOrganizer
 from StructureFinder import StructureFinder
 
-from UI.UtilsUI import split_with_separators, get_fused_limits
+from UI.UtilsUI import split_with_separators, get_fused_limits, NoWheelComboBox
 
 class Highlighter(QSyntaxHighlighter):
     def __init__(self, parent=None):
@@ -69,7 +69,7 @@ class StructureElementWidget(QWidget):
         label = QLabel(struct_name)
         v_layout.addWidget(label)
 
-        self.combo = QComboBox()
+        self.combo = NoWheelComboBox()
         v_layout.addWidget(self.combo)
 
         self.combo.addItems(possible_values)

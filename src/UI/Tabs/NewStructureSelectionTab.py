@@ -341,8 +341,10 @@ class StructureSelectionTab(TabWidget):
     def _get_structure_string(self):
         try:
             fused_structure = self.structure_selector.get_fused_example_structure()
-            self._structureFinder.find_structure(fused_structure)
             structure_positions = self.structure_selector.get_selected_structure_pos()
+
+            self._structureFinder.find_structure(fused_structure, structure_positions)
+            
             structure_str = self._structureFinder.get_structure_str(*structure_positions, *StructureSelectionTab.delimiters_keywords)
         except Exception as e:
             self._update_status_display(f"Error: {e}", MessageType.ERROR)

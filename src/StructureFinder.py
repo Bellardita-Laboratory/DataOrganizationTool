@@ -79,7 +79,7 @@ class StructureFinder:
         """
         return self._structure_data[structure_id][data_id]
     
-    def find_structure(self, initial_structure:list[str]):
+    def find_structure(self, initial_structure:list[str], struct_of_interest:set[int]|None=None):
         """
             Returns all the possible values of the data for each component of the initial structure.
 
@@ -87,6 +87,13 @@ class StructureFinder:
                 _structure_data list that contains the possible values of the data for each component of the initial structure
                 _structure_idx list that contains the start and end index of the best match for each component of the initial structure
         """
+        ## Make sure that struct_of_interest is a non empty set
+        if struct_of_interest is None or len(struct_of_interest) == 0:
+            struct_of_interest = set(range(len(initial_structure)))
+            
+        if not isinstance(struct_of_interest, set):
+            struct_of_interest = set(struct_of_interest)
+
 
         n_groups = len(initial_structure)
         self._structure_data = [[] for _ in initial_structure]
@@ -96,7 +103,7 @@ class StructureFinder:
         for i,line in enumerate(self._data_list):
             possible_configurations, idx = self._get_possible_configurations(line, self._component_limits[i], n_groups)
             
-            distances = [sum(distance(possible_configurations[i][j], initial_structure[j]) for j in range(n_groups)) 
+            distances = [sum(distance(possible_configurations[i][j], initial_structure[j]) for j in range(n_groups) if j in struct_of_interest) 
                          for i in range(len(possible_configurations))]
 
             # Minimize the distance between the initial structure and the data

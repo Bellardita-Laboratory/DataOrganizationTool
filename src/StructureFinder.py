@@ -50,6 +50,9 @@ class StructureFinder:
         if n_groups == 1:
             return [[initial_str]], [(0, len(component_limits))]
         
+        # To allow for empty groups at the beginning and end in order to shift the components
+        component_limits = deepcopy(component_limits)
+        component_limits = [(0, 1)] + component_limits + [(len(initial_str), len(initial_str))]
 
         # From https://stackoverflow.com/questions/72063383/place-n-unique-elements-into-all-possible-k-groups-with-monotonicity-maintaining
         ans = []

@@ -68,6 +68,7 @@ class StructureElementWidget(QWidget):
 
         label = QLabel(struct_name)
         v_layout.addWidget(label)
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.combo = NoWheelComboBox()
         v_layout.addWidget(self.combo)
@@ -218,8 +219,15 @@ class StructureSelectionTab(TabWidget):
         ("require_video_data", "Don't copy if no corresponding video is found", False)
     ]
 
+    # Separators
+    separators_description:str="Separators used to split the filenames\n(Multiple separators can be given separated by a comma ',')"
+
     default_separator:str='_'
     separators_separator:str=','
+
+    # Structure selection
+    structure_selection_description:str="""Select the structure of the filenames
+    Multiple elements can be selected for each group as long as they are adjacent to each other"""
 
     # Parameters for the user to make the structure building string
     delimiters_keywords:list[str]=['Group', 'Timepoint', 'Mouse', 'Run']
@@ -255,10 +263,24 @@ class StructureSelectionTab(TabWidget):
         structure_selection_group_layout = QVBoxLayout()
         structure_selection_group.setLayout(structure_selection_group_layout)
 
+        # Separator selection
+        separator_layout = QHBoxLayout()
+        structure_selection_group_layout.addLayout(separator_layout)
+
+        separator_label = QLabel(StructureSelectionTab.separators_description)
+        # separator_label.setWordWrap(True)
+        separator_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        separator_layout.addWidget(separator_label)
+
         self.separator_edit = QLineEdit()
         self.separator_edit.setText(StructureSelectionTab.default_separator)
-        structure_selection_group_layout.addWidget(self.separator_edit)
+        separator_layout.addWidget(self.separator_edit)
         self.separator_edit.textChanged.connect(self._separator_text_changed)
+
+        # Structure selection widget
+        structure_selection_label = QLabel(StructureSelectionTab.structure_selection_description)
+        structure_selection_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        structure_selection_group_layout.addWidget(structure_selection_label)
 
         self.structure_selector = StructureSelectionWidget()
         self.structure_selector.value_changed_signal.connect(self.refresh_names_display)
@@ -292,15 +314,19 @@ class StructureSelectionTab(TabWidget):
 
         h_layout = QHBoxLayout()
         v_layout.addLayout(h_layout)
+        v_layout.setStretchFactor(h_layout, 1) # Make h_layout expand
 
         for name in StructureSelectionTab.name_list_parameters:
             in_v_layout = QVBoxLayout()
             h_layout.addLayout(in_v_layout)
 
             label = QLabel(name)
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             in_v_layout.addWidget(label)
 
             list_widget = QListWidget()
+            list_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)  # Make list_widget expand
+            list_widget.setContentsMargins(0, 0, 0, 0)
             self.list_widget_dict[name] = list_widget
             in_v_layout.addWidget(list_widget)
 

@@ -1,4 +1,4 @@
-from PySide6.QtCore import Signal, QLocale, QThread, QObject
+from PySide6.QtCore import Signal, QLocale, QThread, QObject, Qt, QEvent
 from PySide6.QtGui import QValidator, QDoubleValidator
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -90,6 +90,18 @@ class VectorInputLayout(QHBoxLayout):
 
         # Emit the signal with the new value of the vector
         self.textChanged.emit(tuple(list_values))
+
+class NoWheelComboBox(QComboBox):
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+
+    def wheelEvent(self, event:QEvent):
+        if self.hasFocus():
+            return QComboBox.wheelEvent(self, event)
+        else:
+            event.ignore()
 
 def tryconvert(value, default, *types):
     for t in types:

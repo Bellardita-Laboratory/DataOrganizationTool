@@ -1,5 +1,5 @@
 from copy import deepcopy
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QSize, QRect, QPoint
 from PySide6.QtGui import QSyntaxHighlighter, QTextCharFormat
 from PySide6.QtWidgets import (
     QWidget,
@@ -12,9 +12,12 @@ from PySide6.QtWidgets import (
     QListWidget,
     QPlainTextEdit,
     QCheckBox,
-    QComboBox,
-    QLineEdit
+    QLineEdit,
+    QLayout, 
+    QSizePolicy,
+    QLayoutItem
 )
+
 
 import numpy as np
 import regex as re
@@ -24,7 +27,12 @@ from UI.UtilsUI import MessageType
 from FileOrganizer import FileOrganizer
 from StructureFinder import StructureFinder
 
-from UI.UtilsUI import split_with_separators, get_fused_limits, NoWheelComboBox
+from UI.UtilsUI import (
+    split_with_separators, 
+    get_fused_limits, 
+    NoWheelComboBox,
+    FlowLayout
+)
 
 class Highlighter(QSyntaxHighlighter):
     def __init__(self, parent=None):
@@ -99,7 +107,7 @@ class StructureSelectionWidget(QWidget):
         self._setup_UI()
 
     def _setup_UI(self):
-        self.h_layout = QHBoxLayout()
+        self.h_layout = FlowLayout()
         self.setLayout(self.h_layout)
 
     def clear_widget(self):

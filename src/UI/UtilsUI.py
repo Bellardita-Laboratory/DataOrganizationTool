@@ -1,4 +1,4 @@
-from PySide6.QtCore import Signal, QLocale, QThread, QObject, Qt, QEvent
+from PySide6.QtCore import Signal, QLocale, QThread, QObject, Qt, QEvent, QSize, QRect, QPoint
 from PySide6.QtGui import QValidator, QDoubleValidator
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -10,7 +10,10 @@ from PySide6.QtWidgets import (
     QMessageBox,    
     QMessageBox,
     QProgressBar,
-    QFileDialog
+    QFileDialog,
+    QLayout, 
+    QSizePolicy,
+    QLayoutItem
     )
 
 from enum import StrEnum
@@ -102,6 +105,66 @@ class NoWheelComboBox(QComboBox):
             return QComboBox.wheelEvent(self, event)
         else:
             event.ignore()
+
+class FlowLayout(QLayout):
+    def __init__(self, parent=None, margin=0, spacing=-1):
+        super().__init__(parent)
+        self.itemList : list[QLayoutItem] = []
+
+        self.setContentsMargins(margin, margin, margin, margin)
+        self.setSpacing(spacing)
+
+        self.setSizeConstraint(QLayout.SizeConstraint.SetMinimumSize)
+
+    def addItem(self, item):
+        self.itemList.append(item)
+
+    def sizeHint(self):
+        return self.minimumSize()
+
+    def minimumSize(self):
+        size = QSize(0, 0)
+        for item in self.itemList:
+            itemPos = QSize(item.geometry().x(), item.geometry().y())
+            size = size.expandedTo(itemPos + item.minimumSize())
+        return size
+
+    def setGeometry(self, rect:QRect):
+        super().setGeometry(rect)
+        
+        x, y, lineHeight = 0, 0, 0
+        for item in self.itemList:
+            widget = item.widget()
+
+            spaceX = self.spacing() + widget.style().layoutSpacing(
+                QSizePolicy.ControlType.DefaultType, QSizePolicy.ControlType.DefaultType, Qt.Orientation.Horizontal)
+            nextX = x + item.sizeHint().width() + spaceX
+
+            if nextX > rect.right() and lineHeight > 0:
+                spaceY = self.spacing() + widget.style().layoutSpacing(
+                    QSizePolicy.ControlType.DefaultType, QSizePolicy.ControlType.DefaultType, Qt.Orientation.Vertical)
+                y += lineHeight + spaceY
+
+                x = 0
+                nextX = x + item.sizeHint().width() + spaceX
+
+                lineHeight = 0
+            item.setGeometry(QRect(QPoint(x, y), item.sizeHint()))
+            x = nextX
+            lineHeight = max(lineHeight, item.sizeHint().height())
+
+    def count(self):
+        return len(self.itemList)
+
+    def itemAt(self, index):
+        if index >= 0 and index < len(self.itemList):
+            return self.itemList[index]
+        return None
+
+    def takeAt(self, index):
+        if index >= 0 and index < len(self.itemList):
+            return self.itemList.pop(index)
+        return None
 
 def tryconvert(value, default, *types):
     for t in types:

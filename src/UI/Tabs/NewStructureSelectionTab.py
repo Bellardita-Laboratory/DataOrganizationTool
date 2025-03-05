@@ -335,6 +335,9 @@ class StructureSelectionTab(TabWidget):
             print("Error: ", e)
             raise e
         
+        # Actualize the names display
+        self.refresh_names_display()
+        
     def _get_structure_string(self):
         try:
             fused_structure = self.structure_selector.get_fused_example_structure()

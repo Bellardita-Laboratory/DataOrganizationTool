@@ -24,6 +24,8 @@ from UI.UtilsUI import MessageType
 from FileOrganizer import FileOrganizer
 from StructureFinder import StructureFinder
 
+from UI.UtilsUI import split_with_separators, get_fused_limits
+
 class Highlighter(QSyntaxHighlighter):
     def __init__(self, parent=None):
         QSyntaxHighlighter.__init__(self, parent)
@@ -48,26 +50,6 @@ class Highlighter(QSyntaxHighlighter):
                     if group_name in self._subformats:
                         group_start, group_end = _match.span(group_name)
                         self.setFormat(group_start, group_end - group_start, self._subformats[group_name])
-
-def get_fused_limits(values:list):
-    """
-        Get the start and end index of the adjacent list elements with the same value
-    """
-    if len(values) == 0:
-        return []
-
-    limits : list[tuple[int,int]] = []
-    start = 0
-    previous_value = values[0]
-    for i, value in enumerate(values):
-        if value != previous_value:
-            limits.append((start, i-1))
-            start = i
-            previous_value = value
-
-    limits.append((start, len(values)-1))
-    
-    return limits
 
 class StructureElementWidget(QWidget):
     value_changed_signal = Signal(int, str)
@@ -96,7 +78,7 @@ class StructureElementWidget(QWidget):
     def _combo_index_changed(self, index:int):
         self.value_changed_signal.emit(self.struct_id, self.combo.currentText())
 
-    def get_value(self) -> str:
+    def get_value(self):
         return self.combo.currentText()
 
     def set_value(self, value:str):

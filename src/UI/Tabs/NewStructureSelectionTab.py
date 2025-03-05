@@ -115,15 +115,33 @@ class StructureSelectionWidget(QWidget):
         self.possible_values = deepcopy(possible_values)
         self.possible_values.append(StructureSelectionWidget.none_value_str)
 
-        self.set_separator(separator)
+        # Set the separators and actualize the structure widget
+        self.set_separators(separators)
 
-    def set_separator(self, separator:str):
-        self.separator = separator
-        self.example_structure = self.example_str.split(separator)
+    def set_separators(self, separators:list[str]):
+        """
+            Set the separators used to split the example structure string, and actualize the structure widget with the new separators
+        """
+        # Remove empty separators
+        separators = [separator for separator in separators if separator != ""]
+        if len(separators) == 0:
+            raise ValueError("No separator given")
+        
+        self.separators = separators
+        
         self._actualize_structure()
+
+    def actualize_example_structure(self):
+        """
+            Actualize the example structure with the current separators and example_str
+        """
+        self.example_structure, self.example_limits = split_with_separators(self.example_str, self.separators)
 
     def _actualize_structure(self):
         self.clear_widget()
+
+        # Update the example structure with the current separators
+        self.actualize_example_structure()
 
         for i, example_val in enumerate(self.example_structure):
             struct_widget = StructureElementWidget(i, example_val, self.possible_values)
@@ -152,8 +170,7 @@ class StructureSelectionWidget(QWidget):
     def get_selected_structure_pos(self):
         selected_structure = [widget.get_value() for widget in self.structure_widgets]
         fused_ids = get_fused_limits(selected_structure)
-        fused_structure = [selected_structure[start] for start, end in fused_ids]
-
+        fused_structure = [selected_structure[start] for start, _ in fused_ids]
 
         index_selected_struct = tuple(fused_structure.index(val) if val in fused_structure else None for val in self.possible_values if val != StructureSelectionWidget.none_value_str)
 
@@ -163,20 +180,12 @@ class StructureSelectionWidget(QWidget):
         selected_structure = [widget.get_value() for widget in self.structure_widgets]
         fused_ids = get_fused_limits(selected_structure)
 
-        fused_example = []
+        fused_example : list[str] = []
         for start, end in fused_ids:
-            fused_example.append(self.separator.join(self.example_structure[start:end+1]))
-        
-        # fused_example = [[self.example_structure[0]]]
-        # previous_value = selected_structure[0]
-        # for i in range(1, len(selected_structure)):
-        #     if selected_structure[i] == previous_value:
-        #         fused_example[-1].append(self.example_structure[i])
-        #     else:
-        #         fused_example.append([self.example_structure[i]])
-        #         previous_value = selected_structure[i]
-        
-        # fused_example_str = [self.separator.join(fused_group) for fused_group in fused_example]
+            example_start,_ = self.example_limits[start]
+            _, example_end = self.example_limits[end]
+            fused_example.append(self.example_str[example_start:example_end])
+
         return fused_example
         
 
@@ -292,13 +301,16 @@ class StructureSelectionTab(TabWidget):
         """
             Function called when the user changes the separator text
         """
-        separator = self.separator_edit.text()
+        separators_txt = self.separator_edit.text()
+        separators_list = separators_txt.split(StructureSelectionTab.separators_separator)
         try:
-            self.structure_selector.set_separator(separator)
+            self.structure_selector.set_separators(separators_list)
+            self._structureFinder.set_separators(separators_list)
             self.refresh_names_display()
         except Exception as e:
             self._update_status_display(f"Error: {e}", MessageType.ERROR)
             print("Error: ", e)
+            raise e
 
     def setup_widget(self):
         """
@@ -306,13 +318,17 @@ class StructureSelectionTab(TabWidget):
         """
         possible_names = self.file_organizer.get_all_filenames()
         longest_example = max(possible_names, key=len)
-        separator = self.separator_edit.text()
+
+        # Get the list of separators
+        separators_txt = self.separator_edit.text()
+        separators_list = separators_txt.split(StructureSelectionTab.separators_separator)
 
         try:
-            self.structure_selector.setup_structure(longest_example, separator, StructureSelectionTab.delimiters_keywords)
+            # Setup the structure selection widget
+            self.structure_selector.setup_structure(longest_example, separators_list, StructureSelectionTab.delimiters_keywords)
             initial_structure = self.structure_selector.get_fused_example_structure()
 
-            self._structureFinder.set_parameters(possible_names, separator)
+            self._structureFinder.set_parameters(possible_names, separators_list)
             self._structureFinder.find_structure(initial_structure)
         except Exception as e:
             self._update_status_display(f"Error: {e}", MessageType.ERROR)
@@ -336,9 +352,6 @@ class StructureSelectionTab(TabWidget):
         """
             Get the names in each list of parameter and actualize the UI of the tab with them
         """
-        # Actualize
-        # ...
-
         # Set the constraints in the file organizer
         self.file_organizer.set_constraints(**self.constraints_dict)
 

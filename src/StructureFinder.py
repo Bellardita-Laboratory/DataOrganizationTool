@@ -1,8 +1,6 @@
 from copy import deepcopy
 from itertools import combinations
-import glob, os
 import numpy as np
-
 from Levenshtein import distance
 
 from FileOrganizer import FileOrganizer
@@ -86,6 +84,10 @@ class StructureFinder:
         """
             Returns all the possible values of the data for each component of the initial structure.
 
+            The best match is the one that minimizes the sum of the distances between the possible values of the data and the initial structure, on the struct_of_interests.
+            The best match is then used to create the _structure_data list that contains the possible values of the data for each component of the initial structure
+            and the _structure_idx list that contains the start and end index of the best match for each component of the initial structure
+
             Also creates 
                 _structure_data list that contains the possible values of the data for each component of the initial structure
                 _structure_idx list that contains the start and end index of the best match for each component of the initial structure
@@ -159,6 +161,8 @@ class StructureFinder:
         
         
 if __name__ == "__main__":
+    import os
+    
     test_folder = r'C:\Users\walid\Desktop\Work\Kinematrix\Test_Left'
     folder_path = os.path.abspath(os.path.join(test_folder, 'Left'))
     target_path = os.path.abspath(os.path.join(test_folder, 'Target'))

@@ -102,16 +102,21 @@ class StructureSelectionWidget(QWidget):
         self.setLayout(self.h_layout)
 
     def clear_widget(self):
+        """
+            Clear the structure widget
+        """
         for widget in self.structure_widgets:
             widget.deleteLater()
             widget.setParent(None)
         
         self.structure_widgets.clear()
 
-    def setup_structure(self, example_str:str, separator:str, possible_values:list[str]):
-        # Get the initial structure
+    def setup_structure(self, example_str:str, separators:list[str], possible_values:list[str]):
+        """
+            Setup the structure widget with the given example structure string and possible values
+        """
+        # Save the example structure and possible values (with the None value)
         self.example_str = deepcopy(example_str)
-
         self.possible_values = deepcopy(possible_values)
         self.possible_values.append(StructureSelectionWidget.none_value_str)
 
@@ -138,6 +143,9 @@ class StructureSelectionWidget(QWidget):
         self.example_structure, self.example_limits = split_with_separators(self.example_str, self.separators)
 
     def _actualize_structure(self):
+        """
+            Actualize the structure widget with the current example structure
+        """
         self.clear_widget()
 
         # Update the example structure with the current separators
@@ -152,6 +160,11 @@ class StructureSelectionWidget(QWidget):
             struct_widget.value_changed_signal.connect(self._structure_value_changed)
     
     def _structure_value_changed(self, struct_id:int, value:str):
+        """
+            Function called when the value of a structure element changes
+
+            Makes sure that the same value only exist adjacent to each other
+        """
         adjacent_ids = set([struct_id - 1, struct_id, struct_id + 1])
         for i in range(struct_id, len(self.structure_widgets)):
             if i in adjacent_ids and self.structure_widgets[i].get_value() == value:
@@ -168,6 +181,9 @@ class StructureSelectionWidget(QWidget):
         self.value_changed_signal.emit()
 
     def get_selected_structure_pos(self):
+        """
+            Get the selected structure positions in the example structure
+        """
         selected_structure = [widget.get_value() for widget in self.structure_widgets]
         fused_ids = get_fused_limits(selected_structure)
         fused_structure = [selected_structure[start] for start, _ in fused_ids]
@@ -177,6 +193,9 @@ class StructureSelectionWidget(QWidget):
         return index_selected_struct
     
     def get_fused_example_structure(self):
+        """
+            Get the fused example structure, ie the example structure separated into the selected structure groups
+        """
         selected_structure = [widget.get_value() for widget in self.structure_widgets]
         fused_ids = get_fused_limits(selected_structure)
 
@@ -316,6 +335,7 @@ class StructureSelectionTab(TabWidget):
         """
             Setup the structure selection widget
         """
+        # Get all the possible names and the longest name (used to setup the structure selection widget)
         possible_names = self.file_organizer.get_all_filenames()
         longest_example = max(possible_names, key=len)
 
@@ -339,7 +359,11 @@ class StructureSelectionTab(TabWidget):
         self.refresh_names_display()
         
     def _get_structure_string(self):
+        """
+            Get the regex structure string corresponding to the selected structure
+        """
         try:
+            # Get the structure selected by the user
             fused_structure = self.structure_selector.get_fused_example_structure()
             structure_positions = self.structure_selector.get_selected_structure_pos()
 

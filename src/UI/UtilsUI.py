@@ -252,3 +252,96 @@ def delete_worker_thread(worker:QObject|None, thread:QThread|None):
         thread = None
 
     return worker, thread
+
+def get_fused_limits(values:list):
+    """
+        Get the start and end index of the adjacent list elements with the same value
+
+        Example:
+        values = [1,1,1,2,2,3,3,3,3,4,4]
+        get_fused_limits(values) -> [(0, 2), (3, 4), (5, 8), (9, 10)]
+    """
+    if len(values) == 0:
+        return []
+
+    limits : list[tuple[int,int]] = []
+    start = 0
+    previous_value = values[0]
+    for i, value in enumerate(values):
+        if value != previous_value:
+            limits.append((start, i-1))
+            start = i
+            previous_value = value
+
+    limits.append((start, len(values)-1))
+    
+    return limits
+
+# From https://stackoverflow.com/questions/4664850/how-to-find-all-occurrences-of-a-substring
+def find_all(a_str:str, sub:str):
+    """ Yield starting index of all occurrences of sub in a_str """
+    start = 0
+    while True:
+        start = a_str.find(sub, start)
+        if start == -1: return
+        yield start
+        start += len(sub) # use start += 1 to find overlapping matches
+
+
+def split_with_separators(input_str:str, separators:list[str]):
+    """
+        Split the input_str with all the given separators
+
+        Returns the list of the components and the limits (start,end) of the components in the input_str
+    """
+    # Start with the whold string then split it progressively with the separators
+    components_list = [input_str]
+    limits_list = [(0, len(input_str))]
+    for separator in separators:
+        # Skip empty separators to avoid infinite loop
+        if separator == "":
+            continue
+        
+        temp_struct = []
+        temp_limits = []
+        for current_struct, limit in zip(components_list, limits_list):
+            start, end = limit
+
+            # Find the starting index of all the separators in the current_structure
+            separator_pos = list(find_all(current_struct, separator))
+            real_separator_pos = [start + i for i in separator_pos] # Convert from the index in the current structure to the index in the whole string
+
+            # Get the limits of the different parts of the splitted structure
+            if len(real_separator_pos) == 0:
+                limits = [(start, end)]
+            elif len(real_separator_pos) == 1:
+                if real_separator_pos[0] + len(separator) < end:
+                    limits = [(start, real_separator_pos[0]), (real_separator_pos[0]+len(separator), end)]
+                else:
+                    limits = [(start, real_separator_pos[0])]
+            else:
+                middle_limits = [(real_separator_pos[i]+len(separator), real_separator_pos[i+1]) for i in range(len(real_separator_pos)-1)]
+                last_limit = [(real_separator_pos[-1]+len(separator), end)] if real_separator_pos[-1] + len(separator) < end else []
+                limits = [(start, real_separator_pos[0])] + middle_limits + last_limit
+            
+            # Make sure that the splitted parts are not empty
+            limits = [(start,end) for start, end in limits if start < end]
+
+            # Get the corresponding example structure
+            input_struct = [input_str[limits[i][0]:limits[i][1]] for i in range(len(limits))]
+
+            # Add the limits and the example structure to the temporary lists
+            temp_limits.extend(limits)
+            temp_struct.extend(input_struct)
+
+        # Update the example structure and limits
+        components_list = temp_struct
+        limits_list = temp_limits
+    
+    return components_list, limits_list
+
+if __name__ == "__main__":
+    print(split_with_separators("A_B_C_D", ["_"]))
+    print(split_with_separators("A_B_C_D", ["_","_"]))
+    print(split_with_separators("A_B_C_D", ["_","_C"]))
+    print(split_with_separators("A_B_C_D", ["_C","_"]))

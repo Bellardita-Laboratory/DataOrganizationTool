@@ -401,7 +401,7 @@ class StructureSelectionTab(TabWidget):
 
             self._structureFinder.find_structure(fused_structure, structure_positions)
             
-            structure_str = self._structureFinder.get_structure_str(*structure_positions, *StructureSelectionTab.delimiters_keywords)
+            structure_str = self._structureFinder.get_structure_regexp(*structure_positions, *StructureSelectionTab.delimiters_keywords)
         except Exception as e:
             self._update_status_display(f"Error: {e}", MessageType.ERROR)
             print("Error: ", e)

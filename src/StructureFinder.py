@@ -1,7 +1,11 @@
 from copy import deepcopy
 from itertools import combinations
+from typing import Callable
 import numpy as np
 from Levenshtein import distance
+import re
+
+from time import time_ns as time
 
 from FileOrganizer import FileOrganizer
 from UI.UtilsUI import split_with_separators
@@ -53,18 +57,19 @@ class StructureFinder:
         component_limits = [(0, 1)] + component_limits + [(len(initial_str), len(initial_str))]
 
         # From https://stackoverflow.com/questions/72063383/place-n-unique-elements-into-all-possible-k-groups-with-monotonicity-maintaining
-        ans = []
-        idx_ans = []
+        ans : list[list[str]] = []
+        idx_ans : list[list[tuple[int,int]]] = []
         all_pos = list(range(1, len(component_limits)))
         for pos in combinations(all_pos, n_groups - 1):
-            tmp = []
-            idx_tmp = []
+            tmp : list[str] = []
+            idx_tmp : list[tuple[int,int]] = []
             prev_idx = 0
             for curr_idx in pos:
                 # tmp.append(self.separator.join(components[prev_idx:curr_idx]))
                 tmp.append(initial_str[component_limits[prev_idx][0]:component_limits[curr_idx-1][1]])
                 idx_tmp.append((prev_idx, curr_idx-1))
                 prev_idx = curr_idx
+            
             # tmp.append(self.separator.join(components[curr_idx:]))
             tmp.append(initial_str[component_limits[curr_idx][0]:])
             idx_tmp.append((curr_idx, len(component_limits)))
@@ -128,17 +133,20 @@ class StructureFinder:
 
         return possible_structure_values
     
-    def get_structure_str(self, batch_pos:int|None, dataset_pos:int|None, mouse_pos:int|None, run_pos:int|None,
+    def get_structure_regexp(self, batch_pos:int|None, dataset_pos:int|None, mouse_pos:int|None, run_pos:int|None,
                           batch_delimiter:str='Batch', dataset_delimiter:str='Dataset', mouse_delimiter:str='Mouse', run_delimiter:str='Run'):
         """
             Returns the regex string to capture the structure of the data
         """
+        escaped_separators = [re.escape(sep) for sep in self.separators]
+        separators_str = '(?:' + '|'.join(escaped_separators) + ')+('
+
         structure_str = ''
         for i in range(len(self._structure_data)):
             if i == 0:
                 structure_str += '('
             else:
-                structure_str += '(' + '|'.join(self.separators) + ')('
+                structure_str += separators_str
             
             if i == batch_pos:
                 structure_str += batch_delimiter + ':'
@@ -148,9 +156,11 @@ class StructureFinder:
                 structure_str += mouse_delimiter + ':'
             elif i == run_pos:
                 structure_str += run_delimiter + ':'
+            else:
+                structure_str += '?:' # Non capturing group
 
             for j, possible_val in enumerate(self._sorted_possible_structure_values[i]):
-                structure_str += possible_val
+                structure_str += re.escape(possible_val)
                 if j < len(self._sorted_possible_structure_values[i]) - 1:
                     structure_str += '|'
             

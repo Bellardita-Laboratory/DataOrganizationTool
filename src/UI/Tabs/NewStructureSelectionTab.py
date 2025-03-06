@@ -1,5 +1,5 @@
 from copy import deepcopy
-from PySide6.QtCore import Qt, Signal, QSize, QRect, QPoint
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QSyntaxHighlighter, QTextCharFormat
 from PySide6.QtWidgets import (
     QWidget,
@@ -13,9 +13,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QCheckBox,
     QLineEdit,
-    QLayout, 
-    QSizePolicy,
-    QLayoutItem
+    QSizePolicy
 )
 
 
@@ -407,7 +405,7 @@ class StructureSelectionTab(TabWidget):
         except Exception as e:
             self._update_status_display(f"Error: {e}", MessageType.ERROR)
             print("Error: ", e)
-            structure_str = ""
+            raise e
         
         return structure_str
         
@@ -473,6 +471,7 @@ class StructureSelectionTab(TabWidget):
             
             # Add the number of associated elements to the names
             file_names = [f"{name} ({associated_number} elements)" for name, associated_number in zip(names, associated_numbers)]
+            file_names = sorted(file_names)
             
             # Actualize the list widgets with the names
             self._actualize_list_widget(name, file_names)

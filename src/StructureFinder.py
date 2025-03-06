@@ -127,7 +127,7 @@ class StructureFinder:
         
         return best_start_id, best_end_id
     
-    def find_structure(self, initial_structure:list[str], struct_of_interest:set[int]|None=None):
+    def find_structure(self, initial_structure:list[str], struct_of_interest:list[int|None], struct_names:list[str]):
         """
             Returns all the possible values of the data for each component of the initial structure.
 
@@ -140,16 +140,15 @@ class StructureFinder:
                 _structure_idx list that contains the start and end index of the best match for each component of the initial structure
         """
         ## Make sure that struct_of_interest is a non empty set
-        if struct_of_interest is None or len(struct_of_interest) == 0:
-            struct_of_interest = set(range(len(initial_structure)))
-            
-        if not isinstance(struct_of_interest, set):
-            struct_of_interest = set(struct_of_interest)
+        if len(struct_of_interest) == 0:
+            struct_of_interest_set = set(range(len(initial_structure)))
+        else:
+            struct_of_interest_set = set(struct_of_interest)
 
-        if None in struct_of_interest:
-            struct_of_interest.remove(None)
+        if None in struct_of_interest_set:
+            struct_of_interest_set.remove(None)
 
-        list_struct_of_interest = sorted(struct_of_interest)
+        list_struct_of_interest : list[int] = sorted(struct_of_interest_set)
 
         # n_groups = len(initial_structure)
         self._structure_data : list[list[str]] = [[] for _ in initial_structure]
@@ -186,7 +185,7 @@ class StructureFinder:
             ## Fill in the rest of the components (ie the ones that are not of interest)
             start_id = 0
             for j in range(len(initial_structure)):
-                if j not in struct_of_interest:
+                if j not in struct_of_interest_set:
                     start_pos = self._component_limits[i][start_id][0]
 
                     # If the current component is not of interest, then the next one has to be
@@ -217,7 +216,7 @@ class StructureFinder:
             # t = time()
             # possible_configurations, idx = self._get_possible_configurations(line, self._component_limits[i], n_groups,
             #                                                                  initial_structure, distance, n_down_before_cut=1, 
-            #                                                                  struct_of_interest=sorted(struct_of_interest))
+            #                                                                  struct_of_interest=sorted(struct_of_interest_set))
 
             # total_config_time += time() - t
             # print(f"Calculating distances for data {i+1}/{len(self._data_list)}")
@@ -225,7 +224,7 @@ class StructureFinder:
             # print(possible_configurations)
             
             # t = time()
-            # distances = [sum(distance(possible_configurations[i][j], initial_structure[j]) for j in range(n_groups) if j in struct_of_interest) 
+            # distances = [sum(distance(possible_configurations[i][j], initial_structure[j]) for j in range(n_groups) if j in struct_of_interest_set) 
             #              for i in range(len(possible_configurations))]
             # total_dist_time += time() - t
             
@@ -266,9 +265,15 @@ class StructureFinder:
 
         # for i in zip(*self._structure_data):
         #     print(i)
-
-        return possible_structure_values
+        
+        structure_dicts : list[dict[str,str]] = [{
+                    struct_name: self._structure_data[struct_id][i] 
+                    if struct_id is not None else self._data_list[i]
+                for struct_name, struct_id in zip(struct_names, struct_of_interest, strict=True)} 
+            for i in range(len(self._data_list))]
     
+        return structure_dicts
+
     def get_structure_regexp(self, batch_pos:int|None, dataset_pos:int|None, mouse_pos:int|None, run_pos:int|None,
                           batch_delimiter:str='Batch', dataset_delimiter:str='Dataset', mouse_delimiter:str='Mouse', run_delimiter:str='Run'):
         """

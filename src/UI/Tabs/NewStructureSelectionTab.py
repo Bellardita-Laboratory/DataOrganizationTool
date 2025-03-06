@@ -248,7 +248,10 @@ class StructureSelectionTab(TabWidget):
         super().__init__(parent)
 
         self.file_organizer = file_organizer
-        self._structureFinder = StructureFinder()
+        self._side_structureFinder = StructureFinder()
+        self._ventral_structureFinder = StructureFinder()
+        self._video_structureFinder = StructureFinder()
+
         self.constraints_dict : dict[str, bool] = dict()
         self.list_widget_dict : dict[str, QListWidget] = dict()
 
@@ -347,7 +350,7 @@ class StructureSelectionTab(TabWidget):
         """
         self.constraints_dict[param_key] = state
         self.refresh_names_display()
-
+    
     def _separator_text_changed(self):
         """
             Function called when the user changes the separator text
@@ -356,7 +359,8 @@ class StructureSelectionTab(TabWidget):
         separators_list = separators_txt.split(StructureSelectionTab.separators_separator)
         try:
             self.structure_selector.set_separators(separators_list)
-            self._structureFinder.set_separators(separators_list)
+            self._set_structure_finders_separators(separators_list)
+
             self.refresh_names_display()
         except Exception as e:
             self._update_status_display(f"Error: {e}", MessageType.ERROR)
@@ -367,21 +371,13 @@ class StructureSelectionTab(TabWidget):
         """
             Setup the structure selection widget
         """
-        # Get all the possible names and the longest name (used to setup the structure selection widget)
-        possible_names = self.file_organizer.get_all_filenames()
-        longest_example = max(possible_names, key=len)
-
-        # Get the list of separators
-        separators_txt = self.separator_edit.text()
-        separators_list = separators_txt.split(StructureSelectionTab.separators_separator)
+        self._set_structure_parameters()
 
         try:
             # Setup the structure selection widget
-            self.structure_selector.setup_structure(longest_example, separators_list, StructureSelectionTab.delimiters_keywords)
             initial_structure = self.structure_selector.get_fused_example_structure()
 
-            self._structureFinder.set_parameters(possible_names, separators_list)
-            self._structureFinder.find_structure(initial_structure)
+            # self._structureFinder.find_structure(initial_structure)
         except Exception as e:
             self._update_status_display(f"Error: {e}", MessageType.ERROR)
             print("Error: ", e)
@@ -389,42 +385,106 @@ class StructureSelectionTab(TabWidget):
         
         # Actualize the names display
         self.refresh_names_display()
-        
-    def _get_structure_string(self):
+
+    def _set_structure_finders_separators(self, separators_list:list[str]):
         """
-            Get the regex structure string corresponding to the selected structure
+            Set the separators for all the structure finders
+        """
+        self._side_structureFinder.set_separators(separators_list)
+        self._ventral_structureFinder.set_separators(separators_list)
+        self._video_structureFinder.set_separators(separators_list)
+
+    def _set_structure_parameters(self):
+        """
+            Set the structure parameters in the structure finders and the file organizer
+        """
+        # Get all the possible names and the longest name (used to setup the structure selection widget)
+        side_names = self.file_organizer.get_filenames(get_side=True)
+        ventral_names = self.file_organizer.get_filenames(get_ventral=True)
+        video_names = self.file_organizer.get_filenames(get_video=True)
+
+        longest_side_example = max(side_names, key=len)
+
+        # Get the list of separators
+        separators_txt = self.separator_edit.text()
+        separators_list = separators_txt.split(StructureSelectionTab.separators_separator)
+
+        try:
+            # Setup the structure selection widget
+            self.structure_selector.setup_structure(longest_side_example, separators_list, StructureSelectionTab.delimiters_keywords)
+            # initial_structure = self.structure_selector.get_fused_example_structure()
+
+            self._side_structureFinder.set_parameters(side_names, separators_list)
+            self._ventral_structureFinder.set_parameters(ventral_names, separators_list)
+            self._video_structureFinder.set_parameters(video_names, separators_list)
+        except Exception as e:
+            self._update_status_display(f"Error: {e}", MessageType.ERROR)
+            print("Error: ", e)
+            raise e
+        
+    # def _get_structure_string(self):
+    #     """
+    #         Get the regex structure string corresponding to the selected structure
+    #     """
+    #     try:
+    #         # Get the structure selected by the user
+    #         fused_structure = self.structure_selector.get_fused_example_structure()
+    #         structure_positions = self.structure_selector.get_selected_structure_pos()
+
+    #         self._structureFinder.find_structure(fused_structure, structure_positions)
+            
+    #         structure_str = self._structureFinder.get_structure_regexp(*structure_positions, *StructureSelectionTab.delimiters_keywords)
+    #     except Exception as e:
+    #         self._update_status_display(f"Error: {e}", MessageType.ERROR)
+    #         print("Error: ", e)
+    #         raise e
+        
+    #     return structure_str
+    
+    def _get_structures(self):
+        """
+            Get the list of structure dictionnaries corresponding to the selected structure for each file
+
+            Returns a tuple of 3 lists of dictionnaries (side, ventral, video) containing the structure parameters
         """
         try:
             # Get the structure selected by the user
             fused_structure = self.structure_selector.get_fused_example_structure()
             structure_positions = self.structure_selector.get_selected_structure_pos()
 
-            self._structureFinder.find_structure(fused_structure, structure_positions)
-            
-            structure_str = self._structureFinder.get_structure_regexp(*structure_positions, *StructureSelectionTab.delimiters_keywords)
+            side_structure_dicts = self._side_structureFinder.find_structure(fused_structure, structure_positions, StructureSelectionTab.name_list_parameters)
+            ventral_structure_dicts = self._ventral_structureFinder.find_structure(fused_structure, structure_positions, StructureSelectionTab.name_list_parameters)
+            video_structure_dicts = self._video_structureFinder.find_structure(fused_structure, structure_positions, StructureSelectionTab.name_list_parameters)
         except Exception as e:
             self._update_status_display(f"Error: {e}", MessageType.ERROR)
             print("Error: ", e)
             raise e
         
-        return structure_str
+        return side_structure_dicts, ventral_structure_dicts, video_structure_dicts
+    
+    def _actualize_file_organizer(self):
+        # Set the constraints in the file organizer
+        self.file_organizer.set_constraints(**self.constraints_dict)
+
+        # Set the structure parameters in the file organizer
+        struct_dicts = self._get_structures()
+
+        self.file_organizer.set_structure_parameters(*struct_dicts)
         
     def refresh_names_display(self):
         """
             Get the names in each list of parameter and actualize the UI of the tab with them
         """
-        # Set the constraints in the file organizer
-        self.file_organizer.set_constraints(**self.constraints_dict)
-
-        # Set the structure parameters in the file organizer
-        structure_str = self._get_structure_string()
-        self.file_organizer.set_structure_str_parameters(structure_str)
+        self._actualize_file_organizer()
 
         # Get the associated names
         try:
-            associated_names = self.file_organizer.get_names(StructureSelectionTab.delimiters_keywords, 
-                                                             StructureSelectionTab.delimiter_opener, StructureSelectionTab.delimiter_closer,
-                                                             StructureSelectionTab.delimiter_structure_start)
+            associated_names = self.file_organizer.get_names(
+                use_regex=False,
+                delimiters_keywords=StructureSelectionTab.delimiters_keywords, 
+                delimiter_opener=StructureSelectionTab.delimiter_opener, 
+                delimiter_closer=StructureSelectionTab.delimiter_closer,
+                delimiter_structure_start=StructureSelectionTab.delimiter_structure_start)
         except re.error as e:
             self._update_status_display(f"Error in the regular expression: {e}", MessageType.ERROR)
             return
@@ -488,9 +548,7 @@ class StructureSelectionTab(TabWidget):
         """
             Function called when the user clicks on the next button
         """
-        # Set the structure parameters in the file organizer
-        structure_str = self._get_structure_string()
-        self.file_organizer.set_structure_str_parameters(structure_str)
+        self._actualize_file_organizer()
 
         # Emit the signal to change the tab
         self.change_tab_signal.emit()

@@ -1,6 +1,5 @@
 from copy import deepcopy
 from itertools import combinations
-from typing import Callable
 import numpy as np
 from Levenshtein import distance
 import re
@@ -85,6 +84,49 @@ class StructureFinder:
         """
         return self._structure_data[structure_id][data_id]
     
+    def _get_best_match(self, sub_str:str, match_str:str, component_limits:list[tuple[int,int]], min_start_id:int=0):
+        """
+            Get the best match of the sub_str in the match_str starting at the start_pos
+        """
+        best_start_id = min_start_id
+        best_end_id = min_start_id
+        best_distance = np.inf
+
+        for i in range(min_start_id, len(component_limits)):
+            start = component_limits[i][0]
+            sub_str_end = start + len(sub_str)
+            j = i
+            while j < len(component_limits) - 1 and component_limits[j][1] < sub_str_end:
+                j += 1
+            
+            bigger_end_id = j
+            smaller_end_id = j - 1 if j > i else i
+            
+            end_big = component_limits[bigger_end_id][1]
+            end_small = component_limits[smaller_end_id][1]
+
+            possible_component_big = match_str[start:end_big]
+            possible_compnent_small = match_str[start:end_small]
+            
+            dist_big = distance(sub_str, possible_component_big)
+            dist_small = distance(sub_str, possible_compnent_small)
+
+            if dist_big < dist_small:
+                dist = dist_big
+                end = end_big
+                end_id = bigger_end_id
+            else:
+                dist = dist_small
+                end = end_small
+                end_id = smaller_end_id
+
+            if dist < best_distance:
+                best_distance = dist
+                best_start_id = i
+                best_end_id = end_id
+        
+        return best_start_id, best_end_id
+    
     def find_structure(self, initial_structure:list[str], struct_of_interest:set[int]|None=None):
         """
             Returns all the possible values of the data for each component of the initial structure.
@@ -104,32 +146,126 @@ class StructureFinder:
         if not isinstance(struct_of_interest, set):
             struct_of_interest = set(struct_of_interest)
 
+        if None in struct_of_interest:
+            struct_of_interest.remove(None)
 
-        n_groups = len(initial_structure)
-        self._structure_data = [[] for _ in initial_structure]
+        list_struct_of_interest = sorted(struct_of_interest)
+
+        # n_groups = len(initial_structure)
+        self._structure_data : list[list[str]] = [[] for _ in initial_structure]
         self._structure_idx = []
 
+        # total_time = 0
+        # total_config_time = 0
+        # total_dist_time = 0
+        # total_best_time = 0
+        # total_assign_time = 0
         ## For each data, find the configuration that minimizes the distance between the initial structure and the data
         for i,line in enumerate(self._data_list):
-            possible_configurations, idx = self._get_possible_configurations(line, self._component_limits[i], n_groups)
-            
-            distances = [sum(distance(possible_configurations[i][j], initial_structure[j]) for j in range(n_groups) if j in struct_of_interest) 
-                         for i in range(len(possible_configurations))]
+            min_start_id = 0
+            idx = [None] * len(initial_structure)
+            ## For each component of interest of the initial structure, find the best match in the data
+            for struct_id in list_struct_of_interest:
+                # Add empty string if we reached the last component
+                if min_start_id >= len(self._component_limits[i]):
+                    best_start_pos = best_end_pos = len(line)
+                    best_start_id = min_start_id
+                    best_end_id = min_start_id - 1
+                else:
+                    struct = initial_structure[struct_id]
+                    best_start_id, best_end_id = self._get_best_match(struct, line, self._component_limits[i], min_start_id)
+                    best_start_pos = self._component_limits[i][best_start_id][0]
+                    best_end_pos = self._component_limits[i][best_end_id][1]
 
-            # Minimize the distance between the initial structure and the data
-            best_config_id = np.argmin(distances)
-            best_config = possible_configurations[best_config_id]
-            
-            for i, comp in enumerate(best_config):
-                self._structure_data[i].append(comp)
+                self._structure_data[struct_id].append(line[best_start_pos:best_end_pos])
+                idx[struct_id] = (best_start_id, best_end_id)
+                
+                min_start_id = best_end_id + 1
+                    
 
-            self._structure_idx.append(idx[best_config_id])
+            ## Fill in the rest of the components (ie the ones that are not of interest)
+            start_id = 0
+            for j in range(len(initial_structure)):
+                if j not in struct_of_interest:
+                    start_pos = self._component_limits[i][start_id][0]
+
+                    # If the current component is not of interest, then the next one has to be
+                    #   So we can just look at the start id of the next one to infer the end id of this one
+                    if j < len(initial_structure) - 1:
+                        next_id = j+1
+                        next_start_id,_ = idx[next_id]
+                    else:
+                        next_start_id = len(self._component_limits[i]) - 1  # If we reached the last component, then the next one is the last one
+                    
+                    end_id = next_start_id - 1 if next_start_id > start_id else start_id
+                    end_pos = self._component_limits[i][end_id][1]
+
+                    self._structure_data[j].append(line[start_pos:end_pos])
+                    idx[j] = (start_id, end_id)
+
+                    start_id = end_id + 1 if end_id < len(self._component_limits[i]) - 1 else end_id
+                else:
+                    current_end_id = idx[j][1]
+                    start_id = current_end_id + 1 if current_end_id < len(self._component_limits[i]) - 1 else current_end_id
+            
+            self._structure_idx.append(idx)
+
+            # print(self._structure_data)
+            # print(self._structure_idx)
+
+            # print(f'Finding structure for data {i+1}/{len(self._data_list)}')
+            # t = time()
+            # possible_configurations, idx = self._get_possible_configurations(line, self._component_limits[i], n_groups,
+            #                                                                  initial_structure, distance, n_down_before_cut=1, 
+            #                                                                  struct_of_interest=sorted(struct_of_interest))
+
+            # total_config_time += time() - t
+            # print(f"Calculating distances for data {i+1}/{len(self._data_list)}")
+
+            # print(possible_configurations)
+            
+            # t = time()
+            # distances = [sum(distance(possible_configurations[i][j], initial_structure[j]) for j in range(n_groups) if j in struct_of_interest) 
+            #              for i in range(len(possible_configurations))]
+            # total_dist_time += time() - t
+            
+            # print(f"Finding best configuration for data {i+1}/{len(self._data_list)}")
+            # t = time()
+
+            # # Minimize the distance between the initial structure and the data
+            # best_config_id = np.argmin(distances)
+            # best_config = possible_configurations[best_config_id]
+
+            # total_best_time += time() - t
+            # t = time()
+            
+            # for j, comp in enumerate(best_config):
+            #     self._structure_data[j].append(comp)
+
+            # self._structure_idx.append(idx[best_config_id])
+            # total_assign_time = time() - t
+
+        # total_time = total_config_time + total_dist_time + total_best_time + total_assign_time
+
+        # percent_config_time = total_config_time/total_time*100 if total_time != 0 else 0
+        # percent_dist_time = total_dist_time/total_time*100 if total_time != 0 else 0
+        # percent_best_time = total_best_time/total_time*100 if total_time != 0 else 0
+        # percent_assign_time = total_assign_time/total_time*100 if total_time != 0 else 0
+        
+        # print(f"Total time: {total_time}")
+        # print(f"Total config time: {total_config_time} ({percent_config_time}%)")
+        # print(f"Total dist time: {total_dist_time} ({percent_dist_time}%)")
+        # print(f"Total best time: {total_best_time} ({percent_best_time}%)")
+        # print(f"Total assign time: {total_assign_time} ({percent_assign_time}%)")
         
         # Remove potential duplicates
         possible_structure_values = [set(comp) for comp in self._structure_data]
 
         # Save the found configurations in decreasing order of length (useful for regex)
         self._sorted_possible_structure_values = [sorted(comp, key=len, reverse=True) for comp in possible_structure_values]
+
+        # for i in zip(*self._structure_data):
+        #     print(i)
 
         return possible_structure_values
     
@@ -189,4 +325,4 @@ if __name__ == "__main__":
     print(sf.find_structure(initial_structure))
     print(sf.get_structure(0, 0))
 
-    print(sf.get_structure_str(0, 1, 2, 3))
+    print(sf.get_structure_regexp(0, 1, 2, 3))

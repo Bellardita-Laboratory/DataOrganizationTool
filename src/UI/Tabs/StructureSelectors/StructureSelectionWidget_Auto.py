@@ -1,4 +1,5 @@
 from copy import deepcopy
+from typing import override
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QSyntaxHighlighter, QTextCharFormat
 from PySide6.QtWidgets import (
@@ -21,6 +22,7 @@ import numpy as np
 import regex as re
 
 from UI.Tabs.TabWidget import TabWidget
+from UI.Tabs.StructureSelectors.StructureSelectionWidget import StructureSelectionWidget
 from UI.UtilsUI import MessageType
 from FileOrganizer import FileOrganizer
 from StructureFinder import StructureFinder
@@ -31,31 +33,6 @@ from UI.UtilsUI import (
     NoWheelComboBox,
     FlowLayout
 )
-
-class Highlighter(QSyntaxHighlighter):
-    def __init__(self, parent=None):
-        QSyntaxHighlighter.__init__(self, parent)
-
-        self._mappings = {}
-        self._subformats = {}
-
-    def add_subformat(self, name, format):
-        self._subformats[name] = format
-
-    def add_mapping(self, pattern, format):
-        self._mappings[pattern] = format
-
-    def highlightBlock(self, text):
-        for pattern, format in self._mappings.items():
-            for _match in re.finditer(pattern, text):
-                start, end = _match.span()
-                self.setFormat(start, end - start, format)
-
-                nested_groups = _match.capturesdict()
-                for group_name in nested_groups:
-                    if group_name in self._subformats:
-                        group_start, group_end = _match.span(group_name)
-                        self.setFormat(group_start, group_end - group_start, self._subformats[group_name])
 
 class StructureElementWidget(QWidget):
     value_changed_signal = Signal(int, str)
@@ -91,7 +68,7 @@ class StructureElementWidget(QWidget):
     def set_value(self, value:str):
         self.combo.setCurrentText(value)
 
-class StructureSelectionWidget(QWidget):
+class StructureSelectorWidget(QWidget):
     value_changed_signal = Signal()
 
     none_value_str = "None"
@@ -125,7 +102,7 @@ class StructureSelectionWidget(QWidget):
         # Save the example structure and possible values (with the None value)
         self.example_str = deepcopy(example_str)
         self.possible_values = deepcopy(possible_values)
-        self.possible_values.append(StructureSelectionWidget.none_value_str)
+        self.possible_values.append(StructureSelectorWidget.none_value_str)
 
         # Set the separators and actualize the structure widget
         self.set_separators(separators)
@@ -160,7 +137,7 @@ class StructureSelectionWidget(QWidget):
 
         for i, example_val in enumerate(self.example_structure):
             struct_widget = StructureElementWidget(i, example_val, self.possible_values)
-            struct_widget.set_value(StructureSelectionWidget.none_value_str)
+            struct_widget.set_value(StructureSelectorWidget.none_value_str)
             self.h_layout.addWidget(struct_widget)
 
             self.structure_widgets.append(struct_widget)
@@ -177,13 +154,13 @@ class StructureSelectionWidget(QWidget):
             if i in adjacent_ids and self.structure_widgets[i].get_value() == value:
                 adjacent_ids.add(i+1)
             if i not in adjacent_ids and self.structure_widgets[i].get_value() == value:
-                self.structure_widgets[i].set_value(StructureSelectionWidget.none_value_str)
+                self.structure_widgets[i].set_value(StructureSelectorWidget.none_value_str)
 
         for i in range(struct_id, 0, -1):
             if i in adjacent_ids and self.structure_widgets[i].get_value() == value:
                 adjacent_ids.add(i-1)
             if i not in adjacent_ids and self.structure_widgets[i].get_value() == value:
-                self.structure_widgets[i].set_value(StructureSelectionWidget.none_value_str)
+                self.structure_widgets[i].set_value(StructureSelectorWidget.none_value_str)
 
         self.value_changed_signal.emit()
 
@@ -195,7 +172,8 @@ class StructureSelectionWidget(QWidget):
         fused_ids = get_fused_limits(selected_structure)
         fused_structure = [selected_structure[start] for start, _ in fused_ids]
 
-        index_selected_struct = tuple(fused_structure.index(val) if val in fused_structure else None for val in self.possible_values if val != StructureSelectionWidget.none_value_str)
+        index_selected_struct = tuple(fused_structure.index(val) if val in fused_structure else None 
+                                      for val in self.possible_values if val != StructureSelectorWidget.none_value_str)
 
         return index_selected_struct
     
@@ -215,16 +193,10 @@ class StructureSelectionWidget(QWidget):
         return fused_example
         
 
-class StructureSelectionTab(TabWidget):
+class AutoStructureSelectionWidget(StructureSelectionWidget):
     """
         Tab to select the structure parameters
     """
-    # List of boolean value parameters to ask the user (dictionnary key, display parameter name, parameter default value)
-    checkbox_parameters = [
-        ("require_ventral_data", "Don't copy if no corresponding ventral view is found", False),
-        ("require_video_data", "Don't copy if no corresponding video is found", False)
-    ]
-
     # Separators
     separators_description:str="Separators used to split the filenames\n(Multiple separators can be given separated by a comma ',')"
 
@@ -235,25 +207,12 @@ class StructureSelectionTab(TabWidget):
     structure_selection_description:str="""Select the structure of the filenames
     Multiple elements can be selected for each group as long as they are adjacent to each other"""
 
-    # Parameters for the user to make the structure building string
-    delimiters_keywords:list[str]=['Group', 'Timepoint', 'Mouse', 'Run']
-    delimiter_opener:str='('
-    delimiter_closer:str=')'
-    delimiter_structure_start:str=':'
-
-    # List of parameters names to display in the list widget
-    name_list_parameters : list[str] = ["Group", "Timepoint", "Mouse", "Run"]
-
     def __init__(self, file_organizer:FileOrganizer, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
+        super().__init__(file_organizer, parent)
 
-        self.file_organizer = file_organizer
         self._side_structureFinder = StructureFinder()
         self._ventral_structureFinder = StructureFinder()
         self._video_structureFinder = StructureFinder()
-
-        self.constraints_dict : dict[str, bool] = dict()
-        self.list_widget_dict : dict[str, QListWidget] = dict()
 
         self._setup_ui()
     
@@ -261,13 +220,10 @@ class StructureSelectionTab(TabWidget):
         """
             Setup the UI of the tab
         """
-        v_layout = QVBoxLayout()
-        self.setLayout(v_layout)
-
         ### Structure selection
         structure_selection_group = QGroupBox("Structure selection")
         structure_selection_group.setFlat(True)
-        v_layout.addWidget(structure_selection_group)
+        self._structure_selection_layout.addWidget(structure_selection_group)
 
         structure_selection_group_layout = QVBoxLayout()
         structure_selection_group.setLayout(structure_selection_group_layout)
@@ -276,87 +232,31 @@ class StructureSelectionTab(TabWidget):
         separator_layout = QHBoxLayout()
         structure_selection_group_layout.addLayout(separator_layout)
 
-        separator_label = QLabel(StructureSelectionTab.separators_description)
+        separator_label = QLabel(AutoStructureSelectionWidget.separators_description)
         # separator_label.setWordWrap(True)
         separator_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         separator_layout.addWidget(separator_label)
 
         self.separator_edit = QLineEdit()
-        self.separator_edit.setText(StructureSelectionTab.default_separator)
+        self.separator_edit.setText(AutoStructureSelectionWidget.default_separator)
         separator_layout.addWidget(self.separator_edit)
         self.separator_edit.textChanged.connect(self._separator_text_changed)
 
         # Structure selection widget
-        structure_selection_label = QLabel(StructureSelectionTab.structure_selection_description)
+        structure_selection_label = QLabel(AutoStructureSelectionWidget.structure_selection_description)
         structure_selection_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         structure_selection_group_layout.addWidget(structure_selection_label)
 
-        self.structure_selector = StructureSelectionWidget()
+        self.structure_selector = StructureSelectorWidget()
         self.structure_selector.value_changed_signal.connect(self.refresh_names_display)
         structure_selection_group_layout.addWidget(self.structure_selector)
-        
-
-        ### Constraints selection
-        constraints_selection_group = QGroupBox("Constraints")
-        constraints_selection_group.setFlat(True)
-        v_layout.addWidget(constraints_selection_group)
-
-        constraints_h_layout = QHBoxLayout()
-        constraints_selection_group.setLayout(constraints_h_layout)
-
-        # Adds these parameters to the form layout
-        for param_key, display_str, default_value in StructureSelectionTab.checkbox_parameters:
-            self.constraints_dict[param_key] = default_value
-
-            checkbox = QCheckBox(display_str)
-            checkbox.setChecked(default_value)
-            checkbox.stateChanged.connect(
-                lambda state, param_key=param_key: self._checkbox_state_changed((state!=0), param_key)
-            )
-
-            constraints_h_layout.addWidget(checkbox)
-
-        ### Names display
-        self.name_display_status = QLabel()
-        v_layout.addWidget(self.name_display_status, alignment=Qt.AlignmentFlag.AlignCenter)
-        self._update_status_display("No issue", MessageType.INFORMATION)
-
-        h_layout = QHBoxLayout()
-        v_layout.addLayout(h_layout)
-        v_layout.setStretchFactor(h_layout, 1) # Make h_layout expand
-
-        for name in StructureSelectionTab.name_list_parameters:
-            in_v_layout = QVBoxLayout()
-            h_layout.addLayout(in_v_layout)
-
-            label = QLabel(name)
-            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            in_v_layout.addWidget(label)
-
-            list_widget = QListWidget()
-            list_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)  # Make list_widget expand
-            list_widget.setContentsMargins(0, 0, 0, 0)
-            self.list_widget_dict[name] = list_widget
-            in_v_layout.addWidget(list_widget)
-
-        # Next button
-        next_btn = QPushButton("Next")
-        next_btn.clicked.connect(self._next_btn_clicked)
-        v_layout.addWidget(next_btn)
-
-    def _checkbox_state_changed(self, state:bool, param_key:str):
-        """
-            Updates the value of the parameter param_key in self.constraints_dict when the checkbox state changes
-        """
-        self.constraints_dict[param_key] = state
-        self.refresh_names_display()
     
     def _separator_text_changed(self):
         """
             Function called when the user changes the separator text
         """
         separators_txt = self.separator_edit.text()
-        separators_list = separators_txt.split(StructureSelectionTab.separators_separator)
+        separators_list = separators_txt.split(AutoStructureSelectionWidget.separators_separator)
         try:
             self.structure_selector.set_separators(separators_list)
             self._set_structure_finders_separators(separators_list)
@@ -367,24 +267,27 @@ class StructureSelectionTab(TabWidget):
             print("Error: ", e)
             raise e
 
+    @override
     def setup_widget(self):
         """
             Setup the structure selection widget
         """
         self._set_structure_parameters()
 
-        try:
-            # Setup the structure selection widget
-            initial_structure = self.structure_selector.get_fused_example_structure()
+        # try:
+        #     # Setup the structure selection widget
+        #     initial_structure = self.structure_selector.get_fused_example_structure()
 
-            # self._structureFinder.find_structure(initial_structure)
-        except Exception as e:
-            self._update_status_display(f"Error: {e}", MessageType.ERROR)
-            print("Error: ", e)
-            raise e
+        #     # self._structureFinder.find_structure(initial_structure)
+        # except Exception as e:
+        #     self._update_status_display(f"Error: {e}", MessageType.ERROR)
+        #     print("Error: ", e)
+        #     raise e
         
         # Actualize the names display
-        self.refresh_names_display()
+        # self.refresh_names_display()
+
+        super().setup_widget()
 
     def _set_structure_finders_separators(self, separators_list:list[str]):
         """
@@ -407,11 +310,11 @@ class StructureSelectionTab(TabWidget):
 
         # Get the list of separators
         separators_txt = self.separator_edit.text()
-        separators_list = separators_txt.split(StructureSelectionTab.separators_separator)
+        separators_list = separators_txt.split(AutoStructureSelectionWidget.separators_separator)
 
         try:
             # Setup the structure selection widget
-            self.structure_selector.setup_structure(longest_side_example, separators_list, StructureSelectionTab.delimiters_keywords)
+            self.structure_selector.setup_structure(longest_side_example, separators_list, AutoStructureSelectionWidget.delimiters_keywords)
             # initial_structure = self.structure_selector.get_fused_example_structure()
 
             self._side_structureFinder.set_parameters(side_names, separators_list)
@@ -433,7 +336,7 @@ class StructureSelectionTab(TabWidget):
 
     #         self._structureFinder.find_structure(fused_structure, structure_positions)
             
-    #         structure_str = self._structureFinder.get_structure_regexp(*structure_positions, *StructureSelectionTab.delimiters_keywords)
+    #         structure_str = self._structureFinder.get_structure_regexp(*structure_positions, *AutoStructureSelectionWidget.delimiters_keywords)
     #     except Exception as e:
     #         self._update_status_display(f"Error: {e}", MessageType.ERROR)
     #         print("Error: ", e)
@@ -452,9 +355,9 @@ class StructureSelectionTab(TabWidget):
             fused_structure = self.structure_selector.get_fused_example_structure()
             structure_positions = self.structure_selector.get_selected_structure_pos()
 
-            side_structure_dicts = self._side_structureFinder.find_structure(fused_structure, structure_positions, StructureSelectionTab.name_list_parameters)
-            ventral_structure_dicts = self._ventral_structureFinder.find_structure(fused_structure, structure_positions, StructureSelectionTab.name_list_parameters)
-            video_structure_dicts = self._video_structureFinder.find_structure(fused_structure, structure_positions, StructureSelectionTab.name_list_parameters)
+            side_structure_dicts = self._side_structureFinder.find_structure(fused_structure, structure_positions, AutoStructureSelectionWidget.name_list_parameters)
+            ventral_structure_dicts = self._ventral_structureFinder.find_structure(fused_structure, structure_positions, AutoStructureSelectionWidget.name_list_parameters)
+            video_structure_dicts = self._video_structureFinder.find_structure(fused_structure, structure_positions, AutoStructureSelectionWidget.name_list_parameters)
         except Exception as e:
             self._update_status_display(f"Error: {e}", MessageType.ERROR)
             print("Error: ", e)
@@ -468,87 +371,13 @@ class StructureSelectionTab(TabWidget):
 
         # Set the structure parameters in the file organizer
         struct_dicts = self._get_structures()
-
         self.file_organizer.set_structure_parameters(*struct_dicts)
         
+    @override
     def refresh_names_display(self):
         """
             Get the names in each list of parameter and actualize the UI of the tab with them
         """
         self._actualize_file_organizer()
 
-        # Get the associated names
-        try:
-            associated_names = self.file_organizer.get_names(
-                use_regex=False,
-                delimiters_keywords=StructureSelectionTab.delimiters_keywords, 
-                delimiter_opener=StructureSelectionTab.delimiter_opener, 
-                delimiter_closer=StructureSelectionTab.delimiter_closer,
-                delimiter_structure_start=StructureSelectionTab.delimiter_structure_start)
-        except re.error as e:
-            self._update_status_display(f"Error in the regular expression: {e}", MessageType.ERROR)
-            return
-        else:
-            self._update_status_display("No issue", MessageType.INFORMATION)
-        
-        self._actualize_names_display(associated_names)
-
-    def _update_status_display(self, message:str, message_type:MessageType):
-        """
-            Display the error message in the name display status
-        """
-        self.name_display_status.setText(message)
-
-        if message_type == MessageType.ERROR:
-            self.name_display_status.setStyleSheet("font-weight: bold; color: red")
-        elif message_type == MessageType.INFORMATION:
-            self.name_display_status.setStyleSheet("font-weight: bold")
-        elif message_type == MessageType.WARNING:
-            self.name_display_status.setStyleSheet("font-weight: bold; color: orange")
-
-    def _actualize_names_display(self, associated_names:np.ndarray[np.ndarray[str]]):
-        """
-            Actualize the display of the names in the tab
-
-            Args:
-                associated_names: List of tuples containing the associated names (batch, dataset, mouse, run)
-        """
-        # If no element is found, display a warning message
-        if associated_names.size == 0:
-            self._update_status_display("No element found", MessageType.WARNING)
-
-            # Actualize the list widgets with the names
-            for name in StructureSelectionTab.name_list_parameters:
-                self._actualize_list_widget(name, [])
-            return
-        
-        for i, name in enumerate(StructureSelectionTab.name_list_parameters):
-            # Remove duplicates
-            names = list(set(associated_names[:,i]))
-
-            # Get the number of associated elements for each name
-            associated_numbers = [np.sum(associated_names[:,i] == name) for name in names]
-            
-            # Add the number of associated elements to the names
-            file_names = [f"{name} ({associated_number} elements)" for name, associated_number in zip(names, associated_numbers)]
-            file_names = sorted(file_names)
-            
-            # Actualize the list widgets with the names
-            self._actualize_list_widget(name, file_names)
-
-    def _actualize_list_widget(self, name:str, names_list:list[str]):
-        """
-            Actualize the content of the list widget with the given name
-        """
-        list_widget = self.list_widget_dict[name]
-        list_widget.clear()
-        list_widget.addItems(names_list)
-
-    def _next_btn_clicked(self):
-        """
-            Function called when the user clicks on the next button
-        """
-        self._actualize_file_organizer()
-
-        # Emit the signal to change the tab
-        self.change_tab_signal.emit()
+        super().refresh_names_display(use_regex=False)

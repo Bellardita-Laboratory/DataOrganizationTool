@@ -66,6 +66,11 @@ class FileOrganizer:
         self.ventral_csv_filepaths = None
         self.video_filepaths = None
 
+        self.delimiters_keywords = None
+        self.delimiter_opener = None
+        self.delimiter_closer = None
+        self.delimiter_structure_start = None
+
 
     def set_and_load_data_parameters(self, side_keyword:str, ventral_keyword:str,
                                     data_folder_path:os.PathLike, target_folder_path:os.PathLike,
@@ -104,9 +109,7 @@ class FileOrganizer:
 
         return all_names
     
-    def get_names(self, use_regex:bool=True,
-                  delimiters_keywords:list[str]=['Batch', 'Dataset', 'Mouse', 'Run'],
-                  delimiter_opener:str='(', delimiter_closer:str=')', delimiter_structure_start:str=':'):
+    def get_names(self, use_regex:bool):
         """
             Get the names of the batch, dataset, mouse and run for each filepath loaded
 
@@ -114,13 +117,9 @@ class FileOrganizer:
         """
         # Associate the side views with the corresponding ventral views and video
         if use_regex:
-            associated_paths_and_names = self._associate_files_from_structure_regex(verbose=False,
-                                                                                delimiters_keywords=delimiters_keywords, 
-                                                                                delimiter_opener=delimiter_opener, delimiter_closer=delimiter_closer, 
-                                                                                delimiter_structure_start=delimiter_structure_start)
+            associated_paths_and_names = self._associate_files_from_structure_regex(verbose=False)
         else:
-            associated_paths_and_names = self._associate_files_from_structure(verbose=False,
-                                                                              delimiters_keywords=delimiters_keywords)
+            associated_paths_and_names = self._associate_files_from_structure(verbose=False)
 
         # Get the names of the batch, dataset, mouse and run for each ventral file
         associated_names = np.array([(batch_name, dataset_name, mouse_name, run_name) 
@@ -149,21 +148,36 @@ class FileOrganizer:
         """
         self.require_ventral_data = require_ventral_data
         self.require_video_data = require_video_data
+
+    def set_delimiters(self, delimiters_keywords:list[str], 
+                       delimiter_opener:str=None, delimiter_closer:str=None, delimiter_structure_start:str=None):
+        """
+            Set the delimiters for the structure string
+        """
+        self.delimiters_keywords = delimiters_keywords
+
+        if delimiter_opener is not None:
+            self.delimiter_opener = delimiter_opener
+        
+        if delimiter_closer is not None:
+            self.delimiter_closer = delimiter_closer
+
+        if delimiter_structure_start is not None:
+            self.delimiter_structure_start = delimiter_structure_start
+
+    def set_use_regex(self, use_regex:bool):
+        """
+            Set the use of regex for the association of the files
+        """
+        self.use_regex = use_regex
     
 
-    def organize_files(self, use_regex:bool=True,
-                       side_folder_name:str='sideview', ventral_folder_name:str='ventralview', video_folder_name:str='video',
-                       delimiters_keywords:list[str]=['Batch', 'Dataset', 'Mouse', 'Run'], 
-                       delimiter_opener:str='(', delimiter_closer:str=')', delimiter_structure_start:str=':'):
+    def organize_files(self, side_folder_name:str='sideview', ventral_folder_name:str='ventralview', video_folder_name:str='video'):
         # Associate the side views with the corresponding ventral views and video
-        if use_regex:
-            associated_paths_and_names = self._associate_files_from_structure_regex(
-                delimiters_keywords=delimiters_keywords, 
-                delimiter_opener=delimiter_opener, 
-                delimiter_closer=delimiter_closer, 
-                delimiter_structure_start=delimiter_structure_start)
+        if self.use_regex:
+            associated_paths_and_names = self._associate_files_from_structure_regex()
         else:
-            associated_paths_and_names = self._associate_files_from_structure(delimiters_keywords=delimiters_keywords)
+            associated_paths_and_names = self._associate_files_from_structure()
 
         # Remove the mouse name and run name from the associated names (they are not needed for the folder structure)
         associated_paths = [(batch_name, dataset_name, side_csv_filepath, ventral_csv_filepath, video_filepath) 
@@ -188,58 +202,63 @@ class FileOrganizer:
 
         return side_csv_filepaths, ventral_csv_filepaths, video_filepaths
 
-    def _associate_files_from_structure_regex(self, delimiters_keywords:list[str], verbose:bool=True,
-                                            delimiter_opener:str='(', delimiter_closer:str=')', delimiter_structure_start:str=':'):
+    def _associate_files_from_structure_regex(self, verbose:bool=True):
         """
             Associate the side views with the corresponding ventral views and video if they exist
         """
         if self.side_csv_filepaths is None or self.ventral_csv_filepaths is None or self.video_filepaths is None:
             return []
+        
+        if self.delimiters_keywords is None or len(self.delimiters_keywords) == 0 or self.delimiter_opener is None or self.delimiter_closer is None or self.delimiter_structure_start is None:
+            return []
 
         # Get the names of the batch, dataset and mouse for each ventral file
         ventral_csv_data : list[tuple[str,str,str,str]] = []
         for ventral_csv_filepath in self.ventral_csv_filepaths:
-            match_found, file_name, captured_ventral_dict = capture_variables_from_file(ventral_csv_filepath, self.structure_str, delimiters_keywords, 
-                                                                                        delimiter_opener, delimiter_closer, delimiter_structure_start)
+            match_found, file_name, captured_ventral_dict = capture_variables_from_file(ventral_csv_filepath, self.structure_str, self.delimiters_keywords, 
+                                                                                        self.delimiter_opener, self.delimiter_closer, 
+                                                                                        self.delimiter_structure_start)
 
             # If the structure doesn't match the file
             if not match_found:
                 if verbose: print(f"Structure does not match the file {ventral_csv_filepath}")
-                captured_ventral_tuple = tuple(file_name for key in delimiters_keywords)
+                captured_ventral_tuple = tuple(file_name for _ in self.delimiters_keywords)
             else:
                 # Tuple containing batch, dataset, mouse and run names
-                captured_ventral_tuple = tuple(captured_ventral_dict[key] for key in delimiters_keywords)
+                captured_ventral_tuple = tuple(captured_ventral_dict[key] for key in self.delimiters_keywords)
 
             ventral_csv_data.append(captured_ventral_tuple)
 
         # Get the names of the batch, dataset and mouse for each video file
         video_data : list[tuple[str,str,str,str]] = []
         for video_filepath in self.video_filepaths:
-            match_found, file_name, captured_video_dict = capture_variables_from_file(video_filepath, self.structure_str, delimiters_keywords, 
-                                                                                      delimiter_opener, delimiter_closer, delimiter_structure_start)
+            match_found, file_name, captured_video_dict = capture_variables_from_file(video_filepath, self.structure_str, self.delimiters_keywords, 
+                                                                                      self.delimiter_opener, self.delimiter_closer, 
+                                                                                      self.delimiter_structure_start)
 
             # If the structure doesn't match the file
             if not match_found:
                 if verbose: print(f"Structure does not match the file {video_filepath}")
-                captured_video_tuple = tuple(file_name for key in delimiters_keywords)
+                captured_video_tuple = tuple(file_name for _ in self.delimiters_keywords)
             else:
                 # Tuple containing batch, dataset, mouse and run names
-                captured_video_tuple = tuple(captured_video_dict[key] for key in delimiters_keywords)
+                captured_video_tuple = tuple(captured_video_dict[key] for key in self.delimiters_keywords)
 
             video_data.append(captured_video_tuple)
 
 
         associated_paths : list[tuple[str,str,str,str, os.PathLike,os.PathLike|None,os.PathLike|None]] = []
         for side_csv_filepath in self.side_csv_filepaths:
-            match_found, file_name, captured_side_dict = capture_variables_from_file(side_csv_filepath, self.structure_str, delimiters_keywords, 
-                                                                                     delimiter_opener, delimiter_closer, delimiter_structure_start)
+            match_found, file_name, captured_side_dict = capture_variables_from_file(side_csv_filepath, self.structure_str, self.delimiters_keywords, 
+                                                                                     self.delimiter_opener, self.delimiter_closer, 
+                                                                                     self.delimiter_structure_start)
 
             if not match_found:
                 if verbose: print(f"Structure does not match the file {side_csv_filepath}")
-                captured_side_tuple = tuple(file_name for key in delimiters_keywords)
+                captured_side_tuple = tuple(file_name for _ in self.delimiters_keywords)
             else:
                 # Tuple containing batch, dataset, mouse and run names
-                captured_side_tuple = tuple(captured_side_dict[key] for key in delimiters_keywords)
+                captured_side_tuple = tuple(captured_side_dict[key] for key in self.delimiters_keywords)
 
             # Get the corresponding video file
             ventral_correspondances = [self.ventral_csv_filepaths[i] for i in range(len(self.ventral_csv_filepaths)) 
@@ -299,11 +318,14 @@ class FileOrganizer:
 
         return associated_paths
     
-    def _associate_files_from_structure(self, delimiters_keywords:list[str], verbose:bool=True):
+    def _associate_files_from_structure(self, verbose:bool=True):
         """
             Associate the side views with the corresponding ventral views and video if they exist
         """
         if self.side_csv_filepaths is None or self.ventral_csv_filepaths is None or self.video_filepaths is None:
+            return []
+        
+        if self.delimiters_keywords is None or len(self.delimiters_keywords) == 0:
             return []
 
         # Get the names of the batch, dataset and mouse for each ventral file
@@ -312,7 +334,7 @@ class FileOrganizer:
             ventral_struct_dict = self._ventral_structure_dicts[i]
 
             # Tuple containing batch, dataset, mouse and run names
-            captured_ventral_tuple = tuple(ventral_struct_dict[key] for key in delimiters_keywords)
+            captured_ventral_tuple = tuple(ventral_struct_dict[key] for key in self.delimiters_keywords)
 
             ventral_csv_data.append(captured_ventral_tuple)
 
@@ -322,7 +344,7 @@ class FileOrganizer:
             video_struct_dict = self._video_structure_dicts[i]
 
             # Tuple containing batch, dataset, mouse and run names
-            captured_video_tuple = tuple(video_struct_dict[key] for key in delimiters_keywords)
+            captured_video_tuple = tuple(video_struct_dict[key] for key in self.delimiters_keywords)
 
             video_data.append(captured_video_tuple)
 
@@ -332,7 +354,7 @@ class FileOrganizer:
             side_struct_dict = self._side_structure_dicts[i]
             
             # Tuple containing batch, dataset, mouse and run names
-            captured_side_tuple = tuple(side_struct_dict[key] for key in delimiters_keywords)
+            captured_side_tuple = tuple(side_struct_dict[key] for key in self.delimiters_keywords)
 
             # Get the corresponding video file
             ventral_correspondances = [self.ventral_csv_filepaths[i] for i in range(len(self.ventral_csv_filepaths)) 

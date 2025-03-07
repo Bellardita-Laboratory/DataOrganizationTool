@@ -14,8 +14,7 @@ from PySide6.QtWidgets import (
 
 from FileOrganizer import FileOrganizer
 from UI.Tabs.DataSelectionTab import DataSelectionTab
-# from UI.Tabs.StructureSelectionTab import StructureSelectionTab
-from UI.Tabs.NewStructureSelectionTab import StructureSelectionTab
+from UI.Tabs.StructureSelectionTab import StructureSelectionTab
 from UI.Tabs.OutputTab import OutputTab
 
 # Subclass QMainWindow to customize your application's main window
@@ -74,9 +73,6 @@ class MainWindow(QMainWindow):
 
         # Setup the structure selection tab
         self.structure_selection_tab.setup_widget()
-
-        # Actualize the crop compensation widget UI
-        self.structure_selection_tab.refresh_names_display()
 
         # Turn on the crop compensation and param 3D tab
         self._enable_and_set_current_tab(self.structure_selection_tab, [self.structure_selection_tab])

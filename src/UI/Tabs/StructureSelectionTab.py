@@ -1,24 +1,13 @@
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QSyntaxHighlighter, QTextCharFormat
 from PySide6.QtWidgets import (
     QWidget,
-    QGroupBox,
-    QFormLayout,
-    QHBoxLayout,
     QVBoxLayout,
-    QLabel,
     QPushButton,
-    QListWidget,
-    QPlainTextEdit,
     QCheckBox,
     QStackedLayout
 )
 
-import numpy as np
-import regex as re
-
 from UI.Tabs.TabWidget import TabWidget
-from UI.UtilsUI import MessageType
 from FileOrganizer import FileOrganizer
 from UI.Tabs.StructureSelectors.StructureSelectionWidget_Regex import RegexStructureSelectionWidget
 from UI.Tabs.StructureSelectors.StructureSelectionWidget_Auto import AutoStructureSelectionWidget

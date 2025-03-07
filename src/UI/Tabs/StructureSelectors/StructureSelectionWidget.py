@@ -1,15 +1,11 @@
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QSyntaxHighlighter, QTextCharFormat
 from PySide6.QtWidgets import (
     QWidget,
     QGroupBox,
-    QFormLayout,
     QHBoxLayout,
     QVBoxLayout,
     QLabel,
-    QPushButton,
     QListWidget,
-    QPlainTextEdit,
     QCheckBox
 )
 

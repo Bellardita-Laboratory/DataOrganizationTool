@@ -1,27 +1,15 @@
 from copy import deepcopy
 from typing import override
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QSyntaxHighlighter, QTextCharFormat
 from PySide6.QtWidgets import (
     QWidget,
     QGroupBox,
-    QFormLayout,
     QHBoxLayout,
     QVBoxLayout,
     QLabel,
-    QPushButton,
-    QListWidget,
-    QPlainTextEdit,
-    QCheckBox,
     QLineEdit,
-    QSizePolicy
 )
 
-
-import numpy as np
-import regex as re
-
-from UI.Tabs.TabWidget import TabWidget
 from UI.Tabs.StructureSelectors.StructureSelectionWidget import StructureSelectionWidget
 from UI.UtilsUI import MessageType
 from FileOrganizer import FileOrganizer
@@ -273,20 +261,6 @@ class AutoStructureSelectionWidget(StructureSelectionWidget):
             Setup the structure selection widget
         """
         self._set_structure_parameters()
-
-        # try:
-        #     # Setup the structure selection widget
-        #     initial_structure = self.structure_selector.get_fused_example_structure()
-
-        #     # self._structureFinder.find_structure(initial_structure)
-        # except Exception as e:
-        #     self._update_status_display(f"Error: {e}", MessageType.ERROR)
-        #     print("Error: ", e)
-        #     raise e
-        
-        # Actualize the names display
-        # self.refresh_names_display()
-
         super().setup_widget()
 
     def _set_structure_finders_separators(self, separators_list:list[str]):
@@ -315,7 +289,6 @@ class AutoStructureSelectionWidget(StructureSelectionWidget):
         try:
             # Setup the structure selection widget
             self.structure_selector.setup_structure(longest_side_example, separators_list, AutoStructureSelectionWidget.delimiters_keywords)
-            # initial_structure = self.structure_selector.get_fused_example_structure()
 
             self._side_structureFinder.set_parameters(side_names, separators_list)
             self._ventral_structureFinder.set_parameters(ventral_names, separators_list)

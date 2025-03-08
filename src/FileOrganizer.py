@@ -77,6 +77,8 @@ class FileOrganizer:
                                     csv_extension:str, video_extension:str):
         """
             Set the data parameters and load the filepaths
+
+            Returns True if the filepaths were loaded successfully (ie if at least on side view file was found)
         """
         self.side_keyword = side_keyword
         self.ventral_keyword = ventral_keyword
@@ -88,6 +90,8 @@ class FileOrganizer:
 
         # Load the filepaths to all the files in the corresponding folder
         self.side_csv_filepaths, self.ventral_csv_filepaths, self.video_filepaths = self._get_filepaths(self.data_folder_path, self.csv_extension, self.video_extension)
+
+        return len(self.side_csv_filepaths) > 0
 
     def get_filenames(self, get_side:bool=False, get_ventral:bool=False, get_video:bool=False):
         """

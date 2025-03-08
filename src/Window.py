@@ -69,19 +69,12 @@ class MainWindow(QMainWindow):
     def _data_selection_next(self):
         """
             Function called when the user clicks on the next button of the data selection tab
-        """
-        # Setup the structure selection tab
-        try:
-            self.structure_selection_tab.setup_widget()
-        except Exception as e:
-            show_message(
-                str(e),
-                MessageType.ERROR
-            )
-            raise e
-        
+        """        
         # Make sure that all tabs after the data selection tab are disabled to prevent them from displaying data with the previous values
         self._disable_tabs_from(self.data_selection_tab)
+
+        # Setup the structure selection tab
+        self.structure_selection_tab.setup_widget()
 
         # Turn on the crop compensation and param 3D tab
         self._enable_and_set_current_tab(self.structure_selection_tab, [self.structure_selection_tab])

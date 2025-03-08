@@ -280,6 +280,9 @@ class AutoStructureSelectionWidget(StructureSelectionWidget):
         ventral_names = self.file_organizer.get_filenames(get_ventral=True)
         video_names = self.file_organizer.get_filenames(get_video=True)
 
+        if len(side_names) == 0:
+            raise ValueError("No side view file found")
+
         longest_side_example = max(side_names, key=len)
 
         # Get the list of separators

@@ -17,6 +17,8 @@ from UI.Tabs.DataSelectionTab import DataSelectionTab
 from UI.Tabs.StructureSelectionTab import StructureSelectionTab
 from UI.Tabs.OutputTab import OutputTab
 
+from UI.UtilsUI import show_message, MessageType
+
 # Subclass QMainWindow to customize your application's main window
 class MainWindow(QMainWindow):
     def __init__(self, window_title:str, min_win_size:QSize = QSize(1200,487)):
@@ -68,11 +70,18 @@ class MainWindow(QMainWindow):
         """
             Function called when the user clicks on the next button of the data selection tab
         """
+        # Setup the structure selection tab
+        try:
+            self.structure_selection_tab.setup_widget()
+        except Exception as e:
+            show_message(
+                str(e),
+                MessageType.ERROR
+            )
+            raise e
+        
         # Make sure that all tabs after the data selection tab are disabled to prevent them from displaying data with the previous values
         self._disable_tabs_from(self.data_selection_tab)
-
-        # Setup the structure selection tab
-        self.structure_selection_tab.setup_widget()
 
         # Turn on the crop compensation and param 3D tab
         self._enable_and_set_current_tab(self.structure_selection_tab, [self.structure_selection_tab])

@@ -84,46 +84,49 @@ class StructureFinder:
         """
         return self._structure_data[structure_id][data_id]
     
-    def _get_best_match(self, sub_str:str, match_str:str, component_limits:list[tuple[int,int]], min_start_id:int=0):
+    def _get_best_match(self, sub_str:str, match_str:str, component_limits:list[tuple[int,int]], 
+                        min_start_id:int=0, n_test_components:int=2):
         """
             Get the best match of the sub_str in the match_str starting at the start_pos
         """
+        if n_test_components < 1:
+            raise ValueError("Need to test at least 1 component to find the best match")
+
         best_start_id = min_start_id
         best_end_id = min_start_id
         best_distance = np.inf
 
+        def get_best(start_id:int, end_id:int):
+            """ 
+                Get the best match between the sub_str and the component of the match_str between start_id and end_id 
+
+                Returns the best distance, the start id and the end id of the best match
+            """
+            if start_id < 0 or end_id >= len(component_limits) or start_id > end_id:
+                return best_distance, best_start_id, best_end_id
+            
+            possible_component = match_str[component_limits[start_id][0]:component_limits[end_id][1]]
+            dist = distance(sub_str, possible_component)
+
+            if dist < best_distance:
+                return dist, start_id, end_id
+            else:
+                return best_distance, best_start_id, best_end_id
+            
+        ## Find the best match
         for i in range(min_start_id, len(component_limits)):
+            ## Find the index j so that the length of the component is around the length of the substring (best chance of matching)
             start = component_limits[i][0]
             sub_str_end = start + len(sub_str)
             j = i
             while j < len(component_limits) - 1 and component_limits[j][1] < sub_str_end:
-                j += 1
-            
-            bigger_end_id = j
-            smaller_end_id = j - 1 if j > i else i
-            
-            end_big = component_limits[bigger_end_id][1]
-            end_small = component_limits[smaller_end_id][1]
+                j += 1   
 
-            possible_component_big = match_str[start:end_big]
-            possible_compnent_small = match_str[start:end_small]
-            
-            dist_big = distance(sub_str, possible_component_big)
-            dist_small = distance(sub_str, possible_compnent_small)
-
-            if dist_big < dist_small:
-                dist = dist_big
-                end = end_big
-                end_id = bigger_end_id
-            else:
-                dist = dist_small
-                end = end_small
-                end_id = smaller_end_id
-
-            if dist < best_distance:
-                best_distance = dist
-                best_start_id = i
-                best_end_id = end_id
+            ## Test the n_test_components components around the index j
+            for k in range(-n_test_components//2, n_test_components//2):
+                if j+k < i or j+k >= len(component_limits):
+                    continue
+                best_distance, best_start_id, best_end_id = get_best(i, j+k)
         
         return best_start_id, best_end_id
     

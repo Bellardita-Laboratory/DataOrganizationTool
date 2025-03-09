@@ -122,6 +122,9 @@ class StructureFinder:
             else:
                 return best_distance, best_start_id, best_end_id
             
+        test_comp_min = -n_test_components//2
+        test_comp_max = n_test_components//2
+        
         ## Find the best match
         for i in range(min_start_id, len(component_limits)):
             ## Find the index j so that the length of the component is around the length of the substring (best chance of matching)
@@ -132,7 +135,7 @@ class StructureFinder:
                 j += 1   
 
             ## Test the n_test_components components around the index j
-            for k in range(-n_test_components//2, n_test_components//2):
+            for k in range(test_comp_min, test_comp_max):
                 if j+k < i or j+k >= len(component_limits):
                     continue
                 best_distance, best_start_id, best_end_id = get_best(i, j+k)

@@ -186,11 +186,11 @@ def show_message(msg_txt:str, message_type:MessageType):
     """
     msg_type_str = message_type.value
     if message_type == MessageType.ERROR:
-        msg_icon = QMessageBox.Critical
+        msg_icon = QMessageBox.Icon.Critical
     elif message_type == MessageType.WARNING:
-        msg_icon = QMessageBox.Warning
+        msg_icon = QMessageBox.Icon.Warning
     else:
-        msg_icon = QMessageBox.Information
+        msg_icon = QMessageBox.Icon.Information
 
     msg = QMessageBox()
     msg.setIcon(msg_icon)

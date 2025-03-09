@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
 )
 
 from UI.Tabs.TabWidget import TabWidget
-from UI.UtilsUI import get_user_folder_path, add_input_to_form_layout
+from UI.UtilsUI import get_user_folder_path, add_input_to_form_layout, show_message, MessageType
 from FileOrganizer import FileOrganizer
 
 class DataSelectionTab(TabWidget):
@@ -119,6 +119,10 @@ class DataSelectionTab(TabWidget):
         """
             Called when the next button is clicked
         """
-        self.file_organizer.set_and_load_data_parameters(**self.data_selection_dict)
+        side_files_found = self.file_organizer.set_and_load_data_parameters(**self.data_selection_dict)
+
+        if not side_files_found:
+            show_message("No side view file found\nMake sure the 'Data folder' and the 'CSV side keyword' parameters are poperly set", MessageType.ERROR)
+            return
         
         self.change_tab_signal.emit()

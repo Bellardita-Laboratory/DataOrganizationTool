@@ -14,9 +14,10 @@ from PySide6.QtWidgets import (
 
 from FileOrganizer import FileOrganizer
 from UI.Tabs.DataSelectionTab import DataSelectionTab
-# from UI.Tabs.StructureSelectionTab import StructureSelectionTab
-from UI.Tabs.NewStructureSelectionTab import StructureSelectionTab
+from UI.Tabs.StructureSelectionTab import StructureSelectionTab
 from UI.Tabs.OutputTab import OutputTab
+
+from UI.UtilsUI import show_message, MessageType
 
 # Subclass QMainWindow to customize your application's main window
 class MainWindow(QMainWindow):
@@ -68,15 +69,12 @@ class MainWindow(QMainWindow):
     def _data_selection_next(self):
         """
             Function called when the user clicks on the next button of the data selection tab
-        """
+        """        
         # Make sure that all tabs after the data selection tab are disabled to prevent them from displaying data with the previous values
         self._disable_tabs_from(self.data_selection_tab)
 
         # Setup the structure selection tab
         self.structure_selection_tab.setup_widget()
-
-        # Actualize the crop compensation widget UI
-        self.structure_selection_tab.refresh_names_display()
 
         # Turn on the crop compensation and param 3D tab
         self._enable_and_set_current_tab(self.structure_selection_tab, [self.structure_selection_tab])

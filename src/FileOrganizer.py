@@ -128,7 +128,7 @@ class FileOrganizer:
         if use_regex:
             associated_paths_and_names = self._associate_files_from_structure_regex(verbose=False)
         else:
-            associated_paths_and_names = self._associate_files_from_structure(verbose=False)
+            associated_paths_and_names = self._associate_files_from_structure_auto(verbose=False)
 
         # Get the names of the batch, dataset, mouse and run for each ventral file
         associated_names = np.array([(batch_name, dataset_name, mouse_name, run_name) 
@@ -186,7 +186,7 @@ class FileOrganizer:
         if self.use_regex:
             associated_paths_and_names = self._associate_files_from_structure_regex()
         else:
-            associated_paths_and_names = self._associate_files_from_structure()
+            associated_paths_and_names = self._associate_files_from_structure_auto()
 
         # Remove the mouse name and run name from the associated names (they are not needed for the folder structure)
         associated_paths = [(batch_name, dataset_name, side_csv_filepath, ventral_csv_filepath, video_filepath) 
@@ -327,7 +327,7 @@ class FileOrganizer:
 
         return associated_paths
     
-    def _associate_files_from_structure(self, verbose:bool=True):
+    def _associate_files_from_structure_auto(self, verbose:bool=True):
         """
             Associate the side views with the corresponding ventral views and video if they exist
         """

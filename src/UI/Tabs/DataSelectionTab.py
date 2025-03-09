@@ -1,4 +1,5 @@
 import os
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QWidget,
     QGroupBox,
@@ -6,7 +7,8 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QVBoxLayout,
     QLabel,
-    QPushButton
+    QPushButton,
+    QCheckBox
 )
 
 from UI.Tabs.TabWidget import TabWidget
@@ -34,6 +36,11 @@ class DataSelectionTab(TabWidget):
         ("side_keyword", "CSV Side keyword (Keywords contained ONLY in the names of the side view files)", "sideview"),
         ("ventral_keyword", "CSV Ventral keyword (Keywords contained ONLY in the names of the ventral view files)", "ventralview")
     ]
+
+    # Case sensitive checkbox parameters
+    case_sensitive_checkbox_text = "Case sensitive keywords"
+    case_sensitive_key = "case_sensitive"
+    case_sensitive_default_value = True
     
     def __init__(self, file_organizer:FileOrganizer, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -77,6 +84,15 @@ class DataSelectionTab(TabWidget):
 
         # Adds these parameters to the form layout
         add_input_to_form_layout(parameters_form_layout, None, DataSelectionTab.extension_parameters, self.data_selection_dict)
+
+        # Case sensitive checkbox
+        self.case_sensitive_checkbox = QCheckBox()
+        self.data_selection_dict[DataSelectionTab.case_sensitive_key] = DataSelectionTab.case_sensitive_default_value
+        self.case_sensitive_checkbox.setChecked(DataSelectionTab.case_sensitive_default_value)
+        self.case_sensitive_checkbox.stateChanged.connect(
+            lambda state : self.data_selection_dict.__setitem__(DataSelectionTab.case_sensitive_key, state == Qt.CheckState.Checked.value)
+        )
+        parameters_form_layout.addRow(DataSelectionTab.case_sensitive_checkbox_text, self.case_sensitive_checkbox)
 
         add_input_to_form_layout(parameters_form_layout, None, DataSelectionTab.keyword_parameters, self.data_selection_dict)
 

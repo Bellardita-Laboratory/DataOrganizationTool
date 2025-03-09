@@ -72,7 +72,7 @@ class FileOrganizer:
         self.delimiter_structure_start = None
 
 
-    def set_and_load_data_parameters(self, side_keyword:str, ventral_keyword:str,
+    def set_and_load_data_parameters(self, side_keyword:str, ventral_keyword:str, case_sensitive:bool,
                                     data_folder_path:os.PathLike, target_folder_path:os.PathLike,
                                     csv_extension:str, video_extension:str):
         """
@@ -80,8 +80,13 @@ class FileOrganizer:
 
             Returns True if the filepaths were loaded successfully (ie if at least on side view file was found)
         """
-        self.side_keyword = side_keyword
-        self.ventral_keyword = ventral_keyword
+        self.side_keyword = side_keyword.casefold() if not case_sensitive else side_keyword
+        self.ventral_keyword = ventral_keyword.casefold() if not case_sensitive else ventral_keyword
+
+        if case_sensitive:
+            self.case_format = lambda x: x
+        else:
+            self.case_format = lambda x: x.casefold()
 
         self.data_folder_path = data_folder_path
         self.target_folder_path = target_folder_path
@@ -200,8 +205,8 @@ class FileOrganizer:
         video_filepaths = glob.glob(os.path.join('**','*'+video_extension), root_dir=folder_path , recursive=True)
 
         # Get the filepaths for the side and ventral views
-        side_csv_filepaths : list[os.PathLike] = [os.path.join(folder_path, filepath) for filepath in csv_filepaths if self.side_keyword in filepath]
-        ventral_csv_filepaths : list[os.PathLike] = [os.path.join(folder_path, filepath) for filepath in csv_filepaths if self.ventral_keyword in filepath]
+        side_csv_filepaths : list[os.PathLike] = [os.path.join(folder_path, filepath) for filepath in csv_filepaths if self.side_keyword in self.case_format(filepath)]
+        ventral_csv_filepaths : list[os.PathLike] = [os.path.join(folder_path, filepath) for filepath in csv_filepaths if self.ventral_keyword in self.case_format(filepath)]
         video_filepaths : list[os.PathLike] = [os.path.join(folder_path, filepath) for filepath in video_filepaths]
 
         return side_csv_filepaths, ventral_csv_filepaths, video_filepaths
@@ -303,7 +308,7 @@ class FileOrganizer:
                 if verbose: print(f"Multiple videos for this data : {video_correspondances}")
 
                 # Get the video with no tracking if it exists
-                no_track_vid = [filepath for filepath in video_correspondances if self.side_keyword not in filepath and self.ventral_keyword not in filepath]
+                no_track_vid = [filepath for filepath in video_correspondances if self.side_keyword not in self.case_format(filepath) and self.ventral_keyword not in self.case_format(filepath)]
 
                 if len(no_track_vid) == 1:
                     if verbose: print(f"Choosing the video with no tracking (ie not containing {self.side_keyword} or {self.ventral_keyword}) : {no_track_vid[0]}")
@@ -399,7 +404,7 @@ class FileOrganizer:
                 if verbose: print(f"Multiple videos for this data : {video_correspondances}")
 
                 # Get the video with no tracking if it exists
-                no_track_vid = [filepath for filepath in video_correspondances if self.side_keyword not in filepath and self.ventral_keyword not in filepath]
+                no_track_vid = [filepath for filepath in video_correspondances if self.side_keyword not in self.case_format(filepath) and self.ventral_keyword not in self.case_format(filepath)]
 
                 if len(no_track_vid) == 1:
                     if verbose: print(f"Choosing the video with no tracking (ie not containing {self.side_keyword} or {self.ventral_keyword}) : {no_track_vid[0]}")

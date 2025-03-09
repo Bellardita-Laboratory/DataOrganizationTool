@@ -1,6 +1,6 @@
 from copy import deepcopy
 from itertools import combinations
-import numpy as np
+from numpy import argmax, inf
 from Levenshtein import distance
 import re
 
@@ -13,6 +13,15 @@ class StructureFinder:
     def set_parameters(self, data_list:list[str], separators:list[str]):
         self._data_list = data_list
         self.set_separators(separators)
+
+    def get_best_representative(self):
+        """
+            Get the best representative of the data, ie the one with the most components
+
+            Also returns the number of components of the best representative
+        """
+        best_id = argmax([len(comps) for comps in self._component_limits])
+        return self._data_list[best_id], len(self._component_limits[best_id])
 
     def set_separators(self, separators:list[str]):
         """
@@ -94,7 +103,7 @@ class StructureFinder:
 
         best_start_id = min_start_id
         best_end_id = min_start_id
-        best_distance = np.inf
+        best_distance = inf
 
         def get_best(start_id:int, end_id:int):
             """ 
@@ -235,7 +244,7 @@ class StructureFinder:
             # t = time()
 
             # # Minimize the distance between the initial structure and the data
-            # best_config_id = np.argmin(distances)
+            # best_config_id = argmin(distances)
             # best_config = possible_configurations[best_config_id]
 
             # total_best_time += time() - t

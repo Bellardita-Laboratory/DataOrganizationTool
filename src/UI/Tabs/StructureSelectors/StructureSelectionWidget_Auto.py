@@ -108,6 +108,13 @@ class StructureSelectorWidget(QWidget):
         
         self._actualize_structure()
 
+    def set_representative(self, representative:str):
+        """
+            Set the representative of the structure widget
+        """
+        self.example_str = deepcopy(representative)
+        self._actualize_structure()
+
     def actualize_example_structure(self):
         """
             Actualize the example structure with the current separators and example_str
@@ -249,6 +256,10 @@ class AutoStructureSelectionWidget(StructureSelectionWidget):
             self.structure_selector.set_separators(separators_list)
             self._set_structure_finders_separators(separators_list)
 
+            new_best_representative, n_comp = self._side_structureFinder.get_best_representative()
+            self.structure_selector.set_representative(new_best_representative)
+
+
             self.refresh_names_display()
         except Exception as e:
             self._update_status_display(f"Error: {e}", MessageType.ERROR)
@@ -283,19 +294,20 @@ class AutoStructureSelectionWidget(StructureSelectionWidget):
         if len(side_names) == 0:
             raise ValueError("No side view file found")
 
-        longest_side_example = max(side_names, key=len)
-
         # Get the list of separators
         separators_txt = self.separator_edit.text()
         separators_list = separators_txt.split(AutoStructureSelectionWidget.separators_separator)
 
         try:
-            # Setup the structure selection widget
-            self.structure_selector.setup_structure(longest_side_example, separators_list, AutoStructureSelectionWidget.delimiters_keywords)
-
             self._side_structureFinder.set_parameters(side_names, separators_list)
             self._ventral_structureFinder.set_parameters(ventral_names, separators_list)
             self._video_structureFinder.set_parameters(video_names, separators_list)
+
+            best_representative, n_comp = self._side_structureFinder.get_best_representative()
+
+
+            # Setup the structure selection widget
+            self.structure_selector.setup_structure(best_representative, separators_list, AutoStructureSelectionWidget.delimiters_keywords)
         except Exception as e:
             self._update_status_display(f"Error: {e}", MessageType.ERROR)
             print("Error: ", e)
@@ -330,6 +342,8 @@ class AutoStructureSelectionWidget(StructureSelectionWidget):
             # Get the structure selected by the user
             fused_structure = self.structure_selector.get_fused_example_structure()
             structure_positions = self.structure_selector.get_selected_structure_pos()
+
+
 
             side_structure_dicts = self._side_structureFinder.find_structure(fused_structure, structure_positions, AutoStructureSelectionWidget.name_list_parameters)
             ventral_structure_dicts = self._ventral_structureFinder.find_structure(fused_structure, structure_positions, AutoStructureSelectionWidget.name_list_parameters)

@@ -97,7 +97,7 @@ class FileOrganizer:
         """
             Get the names of all the files in the folder
         """
-        all_names = []
+        all_names : list[str] = []
 
         if get_side:
             side_names : list[str] = [os.path.splitext(os.path.basename(file))[0] for file in self.side_csv_filepaths]

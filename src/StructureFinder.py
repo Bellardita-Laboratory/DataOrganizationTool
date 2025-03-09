@@ -139,7 +139,7 @@ class StructureFinder:
         
         return best_start_id, best_end_id
     
-    def find_structure(self, initial_structure:list[str], struct_of_interest:list[int|None], struct_names:list[str]):
+    def find_structure(self, initial_structure:list[str], struct_of_interest:list[int|None], struct_names:list[str], n_test_components:int):
         """
             Returns all the possible values of the data for each component of the initial structure.
 
@@ -184,7 +184,7 @@ class StructureFinder:
                     best_end_id = min_start_id - 1
                 else:
                     struct = initial_structure[struct_id]
-                    best_start_id, best_end_id = self._get_best_match(struct, line, self._component_limits[i], min_start_id)
+                    best_start_id, best_end_id = self._get_best_match(struct, line, self._component_limits[i], min_start_id, n_test_components)
                     best_start_pos = self._component_limits[i][best_start_id][0]
                     best_end_pos = self._component_limits[i][best_end_id][1]
 

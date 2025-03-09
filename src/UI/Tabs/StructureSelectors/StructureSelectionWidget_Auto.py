@@ -8,6 +8,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QLabel,
     QLineEdit,
+    QSpinBox, 
+    QSizePolicy
 )
 
 from UI.Tabs.StructureSelectors.StructureSelectionWidget import StructureSelectionWidget
@@ -202,6 +204,12 @@ class AutoStructureSelectionWidget(StructureSelectionWidget):
     structure_selection_description:str="""Select the structure of the filenames
     Multiple elements can be selected for each group as long as they are adjacent to each other"""
 
+    # Number of test components
+    test_components_description:str="Number of components tested to find the best match for each structure element\nThe higher the number, the better the result (usually) BUT may be slower"
+    min_test_components:int=1
+    default_max_test_components:int=2
+    default_value_test_components:int=2
+
     def __init__(self, file_organizer:FileOrganizer, parent: QWidget | None = None) -> None:
         super().__init__(file_organizer, parent)
 
@@ -245,6 +253,22 @@ class AutoStructureSelectionWidget(StructureSelectionWidget):
         self.structure_selector = StructureSelectorWidget()
         self.structure_selector.value_changed_signal.connect(self.refresh_names_display)
         structure_selection_group_layout.addWidget(self.structure_selector)
+
+        # Number of test components selection
+        test_components_layout = QHBoxLayout()
+        structure_selection_group_layout.addLayout(test_components_layout)
+
+        test_components_label = QLabel(AutoStructureSelectionWidget.test_components_description)
+        test_components_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        test_components_layout.addWidget(test_components_label)
+
+        self.test_components_spin = QSpinBox()
+        self.test_components_spin.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.test_components_spin.setMinimum(AutoStructureSelectionWidget.min_test_components)
+        self.test_components_spin.setMaximum(AutoStructureSelectionWidget.default_max_test_components)
+        self.test_components_spin.setValue(AutoStructureSelectionWidget.default_value_test_components)
+        test_components_layout.addWidget(self.test_components_spin)
+        self.test_components_spin.valueChanged.connect(self.refresh_names_display)
     
     def _separator_text_changed(self):
         """
@@ -258,7 +282,8 @@ class AutoStructureSelectionWidget(StructureSelectionWidget):
 
             new_best_representative, n_comp = self._side_structureFinder.get_best_representative()
             self.structure_selector.set_representative(new_best_representative)
-
+            
+            self.test_components_spin.setMaximum(n_comp)
 
             self.refresh_names_display()
         except Exception as e:
@@ -305,6 +330,7 @@ class AutoStructureSelectionWidget(StructureSelectionWidget):
 
             best_representative, n_comp = self._side_structureFinder.get_best_representative()
 
+            self.test_components_spin.setMaximum(n_comp)
 
             # Setup the structure selection widget
             self.structure_selector.setup_structure(best_representative, separators_list, AutoStructureSelectionWidget.delimiters_keywords)
@@ -343,11 +369,12 @@ class AutoStructureSelectionWidget(StructureSelectionWidget):
             fused_structure = self.structure_selector.get_fused_example_structure()
             structure_positions = self.structure_selector.get_selected_structure_pos()
 
+            # Get the number of test components
+            n_test_components = self.test_components_spin.value()
 
-
-            side_structure_dicts = self._side_structureFinder.find_structure(fused_structure, structure_positions, AutoStructureSelectionWidget.name_list_parameters)
-            ventral_structure_dicts = self._ventral_structureFinder.find_structure(fused_structure, structure_positions, AutoStructureSelectionWidget.name_list_parameters)
-            video_structure_dicts = self._video_structureFinder.find_structure(fused_structure, structure_positions, AutoStructureSelectionWidget.name_list_parameters)
+            side_structure_dicts = self._side_structureFinder.find_structure(fused_structure, structure_positions, AutoStructureSelectionWidget.name_list_parameters, n_test_components)
+            ventral_structure_dicts = self._ventral_structureFinder.find_structure(fused_structure, structure_positions, AutoStructureSelectionWidget.name_list_parameters, n_test_components)
+            video_structure_dicts = self._video_structureFinder.find_structure(fused_structure, structure_positions, AutoStructureSelectionWidget.name_list_parameters, n_test_components)
         except Exception as e:
             self._update_status_display(f"Error: {e}", MessageType.ERROR)
             print("Error: ", e)

@@ -16,8 +16,8 @@ class OutputTab(TabWidget):
     """
     # List of folder names to ask the user (dictionnary key, display parameter name, parameter default value)
     folder_name_parameters : list[tuple[str, str, float]] = [
-        ("side_folder_name", "Side folder name (Name of the side view folder to create)", "side_view_analysis"),
-        ("ventral_folder_name", "Ventral folder name (Name of the ventral view folder to create)", "ventral_view_analysis"),
+        ("side_folder_name", "Side folder name (Name of the side view folder to create)", "Sideview"),
+        ("ventral_folder_name", "Ventral folder name (Name of the ventral view folder to create)", "Ventralview"),
         ("video_folder_name", "Video folder name (Name of the video folder to create)", "Video")
     ]
 

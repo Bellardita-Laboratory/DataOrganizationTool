@@ -462,12 +462,18 @@ class FileOrganizer:
 
             ## Copy the files to the corresponding folders
             new_name = f"{batch_name}_{dataset_name}_{mouse_name}_{run_name}"
-            side_name = f"{new_name}_{self.side_keyword}{self.csv_extension}"
+            side_name = f"{new_name}"
+            if self.side_keyword is not None and self.side_keyword != '':
+                side_name += f"_{self.side_keyword}"
+            side_name += self.csv_extension
             side_csv_target = os.path.join(side_folder, side_name)
             shutil.copy2(side_csv_filepath, side_csv_target)
 
             if ventral_csv_filepath is not None:
-                ventral_name = f"{new_name}_{self.ventral_keyword}{self.csv_extension}"
+                ventral_name = f"{new_name}"
+                if self.ventral_keyword is not None and self.ventral_keyword != '':
+                    ventral_name += f"_{self.ventral_keyword}"
+                ventral_name += self.csv_extension
                 ventral_csv_target = os.path.join(ventral_folder, ventral_name)
                 shutil.copy2(ventral_csv_filepath, ventral_csv_target)
             

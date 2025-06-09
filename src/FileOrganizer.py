@@ -54,6 +54,8 @@ def capture_variables_from_file(filepath:os.PathLike, structure_str:str,
 
 
 class FileOrganizer:
+    default_batch_name = 'Batch'
+
     def __init__(self) -> None:
         self.side_keyword = None
         self.ventral_keyword = None
@@ -187,13 +189,9 @@ class FileOrganizer:
             associated_paths_and_names = self._associate_files_from_structure_regex()
         else:
             associated_paths_and_names = self._associate_files_from_structure_auto()
-
-        # Remove the mouse name and run name from the associated names (they are not needed for the folder structure)
-        associated_paths = [(batch_name, dataset_name, side_csv_filepath, ventral_csv_filepath, video_filepath) 
-                            for batch_name, dataset_name, _, _, side_csv_filepath, ventral_csv_filepath, video_filepath in associated_paths_and_names]
         
         # Copy the files to the corresponding folders
-        self._copy_with_structure(self.target_folder_path, associated_paths, side_folder_name, ventral_folder_name, video_folder_name)
+        self._copy_with_structure(self.target_folder_path, associated_paths_and_names, side_folder_name, ventral_folder_name, video_folder_name)
 
     
     def _get_filepaths(self, folder_path:os.PathLike, csv_extension:str, video_extension:str):
@@ -423,7 +421,7 @@ class FileOrganizer:
 
         return associated_paths
 
-    def _copy_with_structure(self, target_folder:str, associated_paths:list[tuple[str,str,os.PathLike,os.PathLike|None,os.PathLike|None]],
+    def _copy_with_structure(self, target_folder:str, associated_paths:list[tuple[str,str,str,str,os.PathLike,os.PathLike|None,os.PathLike|None]],
                             side_folder_name:str, ventral_folder_name:str, video_folder_name:str):
         """
             Create the folder strucure and copy the files in their corresponding folders
@@ -432,7 +430,7 @@ class FileOrganizer:
         if not os.path.exists(target_folder):
             os.makedirs(target_folder)
 
-        for batch_name, dataset_name, side_csv_filepath, ventral_csv_filepath, video_filepath in tqdm(associated_paths):
+        for batch_name, dataset_name, mouse_name, run_name, side_csv_filepath, ventral_csv_filepath, video_filepath in tqdm(associated_paths):
             if batch_name == '':
                 batch_name = self.default_batch_name
             
@@ -463,15 +461,19 @@ class FileOrganizer:
 
 
             ## Copy the files to the corresponding folders
-            side_csv_target = os.path.join(side_folder, os.path.basename(side_csv_filepath))
+            new_name = f"{batch_name}_{dataset_name}_{mouse_name}_{run_name}"
+            side_name = f"{new_name}_{self.side_keyword}{self.csv_extension}"
+            side_csv_target = os.path.join(side_folder, side_name)
             shutil.copy2(side_csv_filepath, side_csv_target)
 
             if ventral_csv_filepath is not None:
-                ventral_csv_target = os.path.join(ventral_folder, os.path.basename(ventral_csv_filepath))
+                ventral_name = f"{new_name}_{self.ventral_keyword}{self.csv_extension}"
+                ventral_csv_target = os.path.join(ventral_folder, ventral_name)
                 shutil.copy2(ventral_csv_filepath, ventral_csv_target)
             
             if video_filepath is not None:
-                video_target = os.path.join(video_folder, os.path.basename(video_filepath))
+                video_name = f"{new_name}_video{self.video_extension}"
+                video_target = os.path.join(video_folder, video_name)
                 shutil.copy2(video_filepath, video_target)
     
 

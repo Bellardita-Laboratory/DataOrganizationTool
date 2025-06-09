@@ -45,10 +45,10 @@ class RegexStructureSelectionWidget(StructureSelectionWidget):
     """
     structure_str_paramters : tuple[str, str, str] = (
         "structure_str", 
-        """Structure of the file names: use '(' and ')' to capture a group (A group can be Group, Timepoint, Mouse or Run)
+        """Structure of the file names: use '(' and ')' to capture a group (A group can be Batch, Group, Mouse or Run)
 The structure of the captured group can be specified with ':'
-eg: To capture a group name that doesn't contain '_' : (Group:[^_]*)_(Timepoint)_(Mouse)_(Run)""",
-        "Dual_side_and_ventral_(Mouse)_Post_(Timepoint:(WT|MU_C(x|X)|MU_Saline|.*))_(Group)_Run(Run:[0-9])"
+eg: To capture a group name that doesn't contain '_' : (Batch:[^_]*)_(Group)_(Mouse)_(Run)""",
+        "Dual_side_and_ventral_(Mouse)_Post_(Group:(WT|MU_C(x|X)|MU_Saline|.*))_(Batch)_Run(Run:[0-9])"
     )
 
     delimiter_description = """Structure supports regular expressions. 
@@ -64,8 +64,8 @@ eg: To capture a group name that doesn't contain '_' : (Group:[^_]*)_(Timepoint)
                                         - Use '$' at the end to specify the end of the string
 
 Examples:
-    - If the file name is 'Group1_Timepoint3_Mouse245_Run78', we can use 'Group(Group)_Timepoint(Timepoint)_Mouse(Mouse)_Run(Run)'
-        It will find '1' for the group name, '3' for the timepoint name, '245' for the mouse name and '78' for the run name
+    - If the file name is 'Batch1_Group3_Mouse245_Run78', we can use 'Batch(Batch)_Group(Group)_Mouse(Mouse)_Run(Run)'
+        It will find '1' for the batch name, '3' for the group name, '245' for the mouse name and '78' for the run name
                                         """
 
     # Parameters for the user to make the structure building string

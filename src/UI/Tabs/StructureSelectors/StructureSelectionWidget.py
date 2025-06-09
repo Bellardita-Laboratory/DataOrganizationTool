@@ -26,10 +26,10 @@ class StructureSelectionWidget(QWidget):
     ]
 
     # Parameters for the user to make the structure building string
-    delimiters_keywords:list[str]=['Group', 'Timepoint', 'Mouse', 'Run']
+    delimiters_keywords:list[str]=['Batch', 'Group', 'Mouse', 'Run']
 
     # List of parameters names to display in the list widget
-    name_list_parameters : list[str] = ["Group", "Timepoint", "Mouse", "Run"]
+    name_list_parameters : list[str] = ["Batch", "Group", "Mouse", "Run"]
 
     def __init__(self, file_organizer:FileOrganizer, parent: QWidget | None = None) -> None:
         super().__init__(parent)
